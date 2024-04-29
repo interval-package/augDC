@@ -1,0 +1,131 @@
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+import pickle
+import os
+import gym
+import tqdm
+from typing import Literal, Union
+from simulator.simulator_base import simulator_base
+
+import simulator.model.model_base as models
+
+path_simulator_buffer = "simulator/simulator_buffer"
+
+def get_simulator_path(env_id, model_type, ftype="pkl"):
+    return os.path.join(path_simulator_buffer, f"simulator_{env_id}_{model_type}.{ftype}")
+
+class simulator_learn(simulator_base):
+
+    def __init__(self, env_id, env:gym.Env, model_type:Literal["MLP", "GAN", "VAE"], model_config=None, **kwargs):
+        """
+        Using the env id to specifize the target simulator.
+        Check the buffer contains the simulator or not. If contains load the simulator, else train with d4rl data and save. 
+        """
+        super().__init__(env_id, env)
+        self.model_type = model_type
+        self.model_config = model_config
+        self.path_model = get_simulator_path(env_id, model_type)
+
+        self.env_model:models.model_base = None
+        # self.load_model(env_id, model_type)
+
+        self.shapes = None
+
+    @classmethod
+    def from_model(cls, model, env, model_config:dict):
+        obj = cls(model_config["env_id"], env, model_config["model_type"], model_config=model_config)
+        obj.set_model(model)
+        return obj
+
+    def load_model(self, model_type):
+        if self.env_model is not None:
+            return self.env_model
+        
+        if os.path.exists(self.path_model):
+            print(f"Load model from {self.path_model}.")
+            with open(self.path_model, "rb") as f:
+                ret = pickle.load(f)
+            self.env_model = ret
+        else:
+            self.env_model:models.model_base = getattr(models, f"model_{model_type}")(**self.model_config)
+            self.env_model.train()
+            self.save()
+        assert isinstance(self.env_model, models.model_base), f"Not a model but a {type(self.env_model)}"
+        return self.env_model
+
+    def set_model(self, model):
+        self.env_model = model
+        return model
+
+    def test_simulator(self, eval_round=256, info=None, pbar=False, **kwargs):
+        """
+        This function is used to test the difference between the simulator and real env.
+        Only consider one step rollout error. Using KL divergence.
+        Return eval dict.
+        """
+        if pbar:
+            pbar = tqdm.tqdm(range(int(eval_round)))
+            pbar.set_description("Test model consistency...")
+        else:
+            pbar = range(int(eval_round))
+        r_acc, s_acc, d_acc = 0, 0, 0
+        
+        def reset():
+            s_init:np.ndarray = self.env.reset()
+            s_init:torch.Tensor = torch.from_numpy(s_init.astype(np.float32)).unsqueeze(0)
+            return s_init
+        
+        s_init = reset()
+        
+        for iter in pbar:
+            # init_s = self.env.observation_space.sample()
+            act:np.ndarray = self.env.action_space.sample()
+            s_env, r_env, d_env, _ = self.env.step(act)
+            act:torch.Tensor = torch.from_numpy(act.astype(np.float32)).unsqueeze(0)
+            r_mdl, s_mdl, d_mdl, _ = self.roll_out_step(s_init, act)
+            r_acc = r_acc + np.square(r_mdl.detach().numpy() - r_env)
+            s_acc = s_acc + np.square(s_mdl.detach().numpy() - s_env)
+            d_acc = d_acc + np.square(d_mdl.detach().numpy() - d_env)
+
+            if d_env:
+                s_init = reset()
+            else:
+                s_init = torch.from_numpy(s_env.astype(np.float32)).unsqueeze(0)
+
+        eval_dict = {
+            "r_acc_mean": r_acc/eval_round,
+            # "r_acc_std":  r_acc/eval_round,
+            "s_acc_mean": s_acc/eval_round,
+            # "s_acc_std":  s_acc/eval_round,
+            "d_acc_mean": d_acc/eval_round,
+            # "d_acc_std":  d_acc/eval_round,
+            "eval_round": eval_round,
+            "info": info
+        }
+        return eval_dict
+
+    def roll_out_step(self, state, action):
+        """
+        [batch, states]. 
+        Return reward, n_state, done, information.
+        """
+        input = torch.cat([state, action], 1)
+        output:torch.Tensor = self.env_model.forward(input)
+        reward, n_state, done = output[:, 1], output[:, 1:-1], output[:, -1]
+        return reward, n_state, done, {}
+
+    def roll_out_traj(self, init_state, policy, length=5):
+        state = init_state
+        ret = []
+        for i in range(length):
+            action = policy(state)
+            r, state, d, _ = self.roll_out_step(state, action)
+            ret.append([r, state, d])
+        return ret
+
+    def save(self):
+        with open(self.path_model, "wb") as f:
+            pickle.dump(self.env_model, f)

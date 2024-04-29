@@ -3,3 +3,6 @@ result/
 .vscode/
 __MACOSX/
 *.pyc
+
+*.pkl
+*json

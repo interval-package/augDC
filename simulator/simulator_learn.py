@@ -14,8 +14,20 @@ import simulator.model.model_base as models
 
 path_simulator_buffer = "simulator/simulator_buffer"
 
-def get_simulator_path(env_id, model_type, ftype="pkl"):
-    return os.path.join(path_simulator_buffer, f"simulator_{env_id}_{model_type}.{ftype}")
+def get_simulator_folder(env_id, model_type):
+    folder_name = f"simulator_{env_id}_{model_type}"
+    ret = os.path.join(path_simulator_buffer, folder_name)
+    if not os.path.exists(ret):
+        os.makedirs(ret)
+    return ret
+
+def get_simulator_path(env_id, model_type, iter:int=None, ftype="pkl"):
+    folder_name = get_simulator_folder(env_id, model_type)
+    if iter is None:
+        ret = os.path.join(folder_name, f"simulator.{ftype}")
+    else:
+        ret = os.path.join(folder_name, f"simulator_{iter}.{ftype}")
+    return ret
 
 class simulator_learn(simulator_base):
 
@@ -27,7 +39,7 @@ class simulator_learn(simulator_base):
         super().__init__(env_id, env)
         self.model_type = model_type
         self.model_config = model_config
-        self.path_model = get_simulator_path(env_id, model_type)
+        self.path_model = get_simulator_path(self.env_id, self.model_type)
 
         self.env_model:models.model_base = None
         # self.load_model(env_id, model_type)
@@ -50,6 +62,7 @@ class simulator_learn(simulator_base):
                 ret = pickle.load(f)
             self.env_model = ret
         else:
+            print(f"Model not exists at {self.path_model}")
             self.env_model:models.model_base = getattr(models, f"model_{model_type}")(**self.model_config)
             self.env_model.train()
             self.save()
@@ -86,9 +99,9 @@ class simulator_learn(simulator_base):
             s_env, r_env, d_env, _ = self.env.step(act)
             act:torch.Tensor = torch.from_numpy(act.astype(np.float32)).unsqueeze(0)
             r_mdl, s_mdl, d_mdl, _ = self.roll_out_step(s_init, act)
-            r_acc = r_acc + np.square(r_mdl.detach().numpy() - r_env)
-            s_acc = s_acc + np.square(s_mdl.detach().numpy() - s_env)
-            d_acc = d_acc + np.square(d_mdl.detach().numpy() - d_env)
+            r_acc = r_acc + np.abs(r_mdl.detach().numpy() - r_env)
+            s_acc = s_acc + np.abs(s_mdl.detach().numpy() - s_env)
+            d_acc = d_acc + np.abs(d_mdl.detach().numpy() - d_env)
 
             if d_env:
                 s_init = reset()
@@ -126,6 +139,11 @@ class simulator_learn(simulator_base):
             ret.append([r, state, d])
         return ret
 
-    def save(self):
+    def save(self, iter=None):
         with open(self.path_model, "wb") as f:
             pickle.dump(self.env_model, f)
+
+        if iter is not None:
+            path_model = get_simulator_path(self.env_id, self.model_type, iter=iter)
+            with open(path_model, "wb") as f:
+                pickle.dump(self.env_model, f)

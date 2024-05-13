@@ -7,7 +7,7 @@ from utils.eval import eval_policy
 from utils.config import get_config, save_config
 from utils.logger import get_logger, get_writer
 from utils.buffer import ReplayBuffer
-from prdc import PRDC
+from algs.prdc import PRDC
 
 if __name__ == "__main__":
     start_time = time.time()

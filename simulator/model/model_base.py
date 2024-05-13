@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import pickle
 import os
 import tqdm
+from typing import Callable, Literal, Union
 from abc import ABC, abstractmethod
 from utils.buffer import ReplayBuffer
 
@@ -57,13 +58,13 @@ class model_MLP(nn.Module, model_base):
         # do not clip output
         return self.model(input)
 
-    def train(self, replay_buffer:ReplayBuffer, rounds=1e3, 
-                eval_round=1000, eval_func=None,
-                save_round=1000, save_func=None,
+    def train(self, replay_buffer:ReplayBuffer, epoches=1e3, 
+                eval_round:int=1000, eval_func:Callable[[model_base, int], Union[dict, str]]=None,
+                save_round:int=1000, save_func:Callable[[model_base, int], Union[dict, str]]=None,
                 **kwargs):
         eval_round = int(eval_round)
         save_round = int(save_round)
-        pbar = tqdm.tqdm(range(int(rounds)))
+        pbar = tqdm.tqdm(range(int(epoches)))
         pbar.set_description("Train MLP....")
         for epoch in pbar:
             state, action, reward, next_state, not_done = replay_buffer.sample(self.batch_size)
@@ -76,16 +77,18 @@ class model_MLP(nn.Module, model_base):
             loss.backward()
             self.optimizer.step()
 
-            if epoch % eval_round:
+            if epoch % eval_round == 0:
                 # default eval method
                 if eval_func is not None:
-                    eval_func(self)
+                    msg = eval_func(self, epoch)
+                    # print(msg)
                 pass
 
-            if epoch % save_round:
+            if epoch % save_round == 0:
                 # default save method
                 if save_func is not None:
-                    save_func(self)
+                    msg = save_func(self, epoch)
+                    # print(msg)
                 pass
             pass
         

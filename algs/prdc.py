@@ -1,15 +1,15 @@
-from prdc import PRDC
+import copy
+from scipy.spatial import KDTree
 import torch
 import torch.nn.functional as F
-from simulator.simulator_learn import simulator_base
+from algs.alg_base import AlgBase
 
-class AugDC(PRDC):
-    def __init__(self, data, simulator: simulator_base, **kwargs):
-        super().__init__(data, **kwargs)
-        self.simulator = simulator
+class PRDC(AlgBase):
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        pass
 
     def train(self, replay_buffer, batch_size=256):
-        # return super().train(replay_buffer, batch_size)
         self.total_it += 1
         tb_statics = dict()
 
@@ -97,5 +97,3 @@ class AugDC(PRDC):
                 )
 
         return tb_statics
-
-

@@ -1,69 +1,15 @@
-import copy
-from scipy.spatial import KDTree
+from algs.alg_base import AlgBase
 import torch
 import torch.nn.functional as F
+from simulator.simulator_learn import simulator_base, simulator_learn
 from net.actor import Actor
 from net.critic import Critic
+from typing import Tuple
 
-
-class PRDC(object):
-    def __init__(
-        self,
-        data,
-        state_dim,
-        action_dim,
-        max_action,
-        device,
-        discount=0.99,
-        tau=0.005,
-        policy_noise=0.2,
-        noise_clip=0.5,
-        policy_freq=2,
-        actor_lr=3e-4,
-        critic_lr=3e-4,
-        alpha=2.5,
-        beta=2,  # [beta* state, action]
-        k=1,
-    ):
-        self.device = torch.device(device)
-        self.actor = Actor(state_dim, action_dim, max_action).to(self.device)
-        self.actor_target = copy.deepcopy(self.actor)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
-        self.critic = Critic(state_dim, action_dim).to(self.device)
-        self.critic_target = copy.deepcopy(self.critic)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
-        self.action_dim = action_dim
-        self.max_action = max_action
-        self.discount = discount
-        self.tau = tau
-        self.policy_noise = policy_noise
-        self.noise_clip = noise_clip
-        self.policy_freq = policy_freq
-        self.alpha = alpha
-
-        self.k = k
-        self.total_it = 0
-        # KD-Tree
-        self.beta = beta
-        self.data = data
-        self.kd_tree = KDTree(data)
-
-        self.models = {
-            "actor": self.actor,
-            "critic": self.critic,
-            "actor_target": self.actor_target,
-            "critic_target": self.critic_target,
-            "actor_optimizer": self.actor_optimizer,
-            "critic_optimizer": self.critic_optimizer,
-        }
-
-        print("state_dim:", state_dim, ", action_dim: ", action_dim)
-
-    @torch.no_grad()
-    def select_action(self, state):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(self.device)
-        return self.actor(state).cpu().data.numpy().flatten()
-
+class ancdc(AlgBase):
+    """
+    Add Anchor to speed up process.
+    """
     def train(self, replay_buffer, batch_size=256):
         self.total_it += 1
         tb_statics = dict()
@@ -110,7 +56,8 @@ class PRDC(object):
             actor_loss = -lmbda * Q.mean()
 
             ## Get the nearest neighbor
-            key = torch.cat([self.beta * state, pi], dim=1).detach().cpu().numpy()
+            key_torch = torch.cat([self.beta * state, pi], dim=1)
+            key = key_torch.detach().cpu().numpy()
             _, idx = self.kd_tree.query(key, k=[self.k], workers=-1)
             ## Calculate the regularization
             nearest_neightbour = (
@@ -118,8 +65,19 @@ class PRDC(object):
                 .squeeze(dim=1)
                 .to(self.device)
             )
-            dc_loss = F.mse_loss(pi, nearest_neightbour)
 
+            nearest_data = (
+                torch.tensor(self.data[idx])
+                .squeeze(axis=1)
+                .to(self.device)
+            )
+            with torch.no_grad():
+                distance = torch.norm(
+                    nearest_data - key_torch, dim=1, p=2, keepdim=True
+                )
+            mask = distance < 0.5
+            # tb_statics.update({"distance": distance.mean().item()})
+            dc_loss = F.mse_loss(pi, nearest_neightbour * mask + pi * (~mask))
             # Optimize the actor
             combined_loss = actor_loss + dc_loss
             self.actor_optimizer.zero_grad()
@@ -152,14 +110,4 @@ class PRDC(object):
                 )
 
         return tb_statics
-
-    def save(self, model_path):
-        state_dict = dict()
-        for model_name, model in self.models.items():
-            state_dict[model_name] = model.state_dict()
-        torch.save(state_dict, model_path)
-
-    def load(self, model_path):
-        state_dict = torch.load(model_path)
-        for model_name, model in self.models.items():
-            model.load_state_dict(state_dict[model_name])
+    pass

@@ -6,3 +6,7 @@ __MACOSX/
 
 *.pkl
 *json
+
+simulator/simulator_buffer/*
+
+runs/*

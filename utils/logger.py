@@ -20,3 +20,8 @@ def get_logger(log_file):
 def get_writer(tb_dir):
     writer = tensorboardX.SummaryWriter(tb_dir)
     return writer
+
+
+def add_scalars(tb_info, writer, step):
+    for key, value in tb_info.items():
+        writer.add_scalar(key, value, step)

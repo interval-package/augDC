@@ -14,8 +14,10 @@ import simulator.model.model_base as models
 
 path_simulator_buffer = "simulator/simulator_buffer"
 
-def get_simulator_folder(env_id, model_type):
+def get_simulator_folder(env_id, model_type, ftime:str=None):
     folder_name = f"simulator_{env_id}_{model_type}"
+    if ftime is not None:
+        folder_name = folder_name + f"_{ftime}"
     ret = os.path.join(path_simulator_buffer, folder_name)
     if not os.path.exists(ret):
         os.makedirs(ret)
@@ -28,6 +30,18 @@ def get_simulator_path(env_id, model_type, iter:int=None, ftype="pkl"):
     else:
         ret = os.path.join(folder_name, f"simulator_{iter}.{ftype}")
     return ret
+
+def calc_cosine_similarity(vector1, vector2):
+    # Compute the dot product
+    dot_product = np.dot(vector1, vector2)
+
+    # Compute the magnitudes
+    magnitude1 = np.linalg.norm(vector1)
+    magnitude2 = np.linalg.norm(vector2)
+
+    # Compute the cosine similarity
+    cosine_similarity = dot_product / (magnitude1 * magnitude2)
+    return cosine_similarity
 
 class simulator_learn(simulator_base):
 
@@ -100,7 +114,9 @@ class simulator_learn(simulator_base):
             act:torch.Tensor = torch.from_numpy(act.astype(np.float32)).unsqueeze(0)
             r_mdl, s_mdl, d_mdl, _ = self.roll_out_step(s_init, act)
             r_acc = r_acc + np.abs(r_mdl.detach().numpy() - r_env)
-            s_acc = s_acc + np.abs(s_mdl.detach().numpy() - s_env)
+            # cosine similarity
+            cos_sim = calc_cosine_similarity(s_mdl.detach().numpy(), s_env)
+            s_acc = s_acc + cos_sim
             d_acc = d_acc + np.abs(d_mdl.detach().numpy() - d_env)
 
             if d_env:
@@ -116,13 +132,14 @@ class simulator_learn(simulator_base):
             "d_acc_mean": d_acc/eval_round,
             # "d_acc_std":  d_acc/eval_round,
             "eval_round": eval_round,
-            "info": info
         }
         return eval_dict
 
+    @torch.no_grad()
     def roll_out_step(self, state, action):
         """
-        [batch, states]. 
+        This function should allow batch level forward.
+        [batch, states].
         Return reward, n_state, done, information.
         """
         input = torch.cat([state, action], 1)
@@ -130,6 +147,7 @@ class simulator_learn(simulator_base):
         reward, n_state, done = output[:, 1], output[:, 1:-1], output[:, -1]
         return reward, n_state, done, {}
 
+    @torch.no_grad()
     def roll_out_traj(self, init_state, policy, length=5):
         state = init_state
         ret = []

@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from net.actor import Actor
 from net.critic import Critic
-
+from typing import Tuple, Union, Literal
 
 class AlgBase(object):
     def __init__(
@@ -24,6 +24,7 @@ class AlgBase(object):
         alpha=2.5,
         beta=2,  # [beta* state, action]
         k=1,
+        **kwargs
     ):
         self.device = torch.device(device)
         self.actor = Actor(state_dim, action_dim, max_action).to(self.device)
@@ -74,3 +75,53 @@ class AlgBase(object):
         state_dict = torch.load(model_path)
         for model_name, model in self.models.items():
             model.load_state_dict(state_dict[model_name])
+
+    def _calc_loss_critic(self, 
+                      trans_t:Tuple[torch.Tensor, torch.Tensor, 
+                                    torch.Tensor, torch.Tensor, 
+                                    torch.Tensor]):
+        state, action, reward, next_state, not_done = trans_t
+        with torch.no_grad():
+            # Select action according to policy and add clipped noise
+            noise = (torch.randn_like(action) * self.policy_noise).clamp(
+                -self.noise_clip, self.noise_clip
+            )
+
+            next_action = (self.actor_target(next_state) + noise).clamp(
+                -self.max_action, self.max_action
+            )
+
+            # Compute the target Q value
+            target_Q1, target_Q2 = self.critic_target(next_state, next_action)
+            target_Q = torch.min(target_Q1, target_Q2)
+            target_Q = reward + not_done * self.discount * target_Q
+
+        # Get current Q estimates
+        current_Q1, current_Q2 = self.critic(state, action)
+
+        # Compute critic loss
+        critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(
+            current_Q2, target_Q
+        )
+        # tb_statics.update({"critic_loss": critic_loss.item()})
+
+        return critic_loss
+
+    def _update_target(self):
+        """
+        This method used to update the target networks.
+        """
+        # Update the frozen target models
+        for param, target_param in zip(
+            self.critic.parameters(), self.critic_target.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
+
+        for param, target_param in zip(
+            self.actor.parameters(), self.actor_target.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )

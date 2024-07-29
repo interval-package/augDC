@@ -58,6 +58,8 @@ if __name__ == "__main__":
     actions = replay_buffer.action
     data = np.hstack([args.beta * states, actions])
 
+    ## TODO The kd tree only considers the state and action pair, need to update
+
     policy = PRDC(data, **kwargs)
 
     evaluations = []

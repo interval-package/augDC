@@ -37,6 +37,29 @@ def mlp(sizes, activation, output_activation=nn.Identity):
         layers += [nn.Linear(sizes[j], sizes[j + 1]), act()]
     return nn.Sequential(*layers)
 
+"""
+Two possible loss for the simulator.
+"""
+
+class CosineSimilarityLoss(nn.Module):
+    def __init__(self):
+        super(CosineSimilarityLoss, self).__init__()
+
+    def forward(self, output, target):
+        output_norm = F.normalize(output, p=2, dim=-1)
+        target_norm = F.normalize(target, p=2, dim=-1)
+        similarity = torch.sum(output_norm * target_norm, dim=-1)
+        loss = 1 - similarity  # Cosine similarity loss
+        return torch.mean(loss)
+    
+class NormLoss(nn.Module):
+    def __init__(self):
+        super(NormLoss, self).__init__()
+
+    def forward(self, output, target):
+        loss = torch.norm(output - target)
+        return loss
+
 class model_MLP(nn.Module, model_base):
     """
     A network to simulate the env model.
@@ -52,7 +75,8 @@ class model_MLP(nn.Module, model_base):
         self.model.to(self.device)
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.loss_f = nn.BCELoss()
+        # self.loss_f = nn.BCELoss()
+        self.loss_f = CosineSimilarityLoss()
 
     def forward(self, input:torch.Tensor):
         # do not clip output
@@ -64,6 +88,7 @@ class model_MLP(nn.Module, model_base):
                 **kwargs):
         eval_round = int(eval_round)
         save_round = int(save_round)
+        # norm_func = torch.tanh
         pbar = tqdm.tqdm(range(int(epoches)))
         pbar.set_description("Train MLP....")
         for epoch in pbar:
@@ -73,14 +98,15 @@ class model_MLP(nn.Module, model_base):
             next_real = torch.cat([reward, next_state, not_done], 1)
             next_pred = self.forward(cur_real)
 
-            loss = self.loss_f(torch.sigmoid(next_real), torch.sigmoid(next_pred))
+            loss:torch.Tensor = self.loss_f(next_real, next_pred)
             loss.backward()
             self.optimizer.step()
-
+            _loss = loss.detach().item()
+            pbar.set_description(f"loss={_loss:0.3}")
             if epoch % eval_round == 0:
                 # default eval method
                 if eval_func is not None:
-                    msg = eval_func(self, epoch)
+                    msg = eval_func(self, epoch, loss=_loss)
                     # print(msg)
                 pass
 

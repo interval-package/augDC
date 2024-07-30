@@ -12,7 +12,11 @@ from simulator.simulator_base import simulator_base
 
 import simulator.model.model_base as models
 
-path_simulator_buffer = "simulator/simulator_buffer"
+path_script = os.path.abspath(__file__)
+
+path_folder = os.path.dirname(path_script)
+
+path_simulator_buffer = os.path.join(path_folder, "simulator_buffer")
 
 def get_simulator_folder(env_id, model_type, ftime:str=None):
     folder_name = f"simulator_{env_id}_{model_type}"

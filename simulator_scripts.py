@@ -11,7 +11,7 @@ from utils.logger import add_scalars
 
 from torch.utils.tensorboard import SummaryWriter
 
-from simulator.model.model_base import model_MLP
+from simulator.model import model_MLP
 from simulator.simulator_learn import get_simulator_path, get_simulator_folder, simulator_base, simulator_learn
 
 """

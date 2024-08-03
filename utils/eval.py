@@ -5,7 +5,6 @@ import imageio
 
 fps = 60
 
-
 def eval_policy(
     policy,
     env_name,

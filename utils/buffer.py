@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import d4rl
 
 
 class ReplayBuffer(object):
@@ -60,3 +61,6 @@ class ReplayBuffer(object):
         self.state = (self.state - mean) / std
         self.next_state = (self.next_state - mean) / std
         return mean, std
+    
+    def from_d4rlenv(self, env):
+        self.convert_D4RL(d4rl.qlearning_dataset(env))

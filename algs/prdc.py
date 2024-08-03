@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from algs.alg_base import AlgBase
 
 class PRDC(AlgBase):
-    def __init__(self,**kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, data, **kwargs):
+        super().__init__(data, **kwargs)
         pass
 
     def train(self, replay_buffer, batch_size=256):

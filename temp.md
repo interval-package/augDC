@@ -15,3 +15,7 @@ solution:
 g3 from dc loss using the sampled state
 
 g4 from dc loss using the auged data or rather the state_next
+
+2. the dc loss are applied to the online fintuning process.
+
+Once we 

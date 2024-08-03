@@ -18,7 +18,7 @@ class model_base(ABC):
         ...
 
     @abstractmethod
-    def forward(self, input):
+    def forward(self, input)->Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         ...
 
     # @abstractmethod

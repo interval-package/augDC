@@ -17,7 +17,7 @@ from simulator.model.model_base import model_base, mlp, CosineSimilarityLoss
 class MdlOptPair:
     net: nn.Module
     loss_f: nn.modules.loss._Loss
-    optimizer: torch.optim.optimizer = None
+    optimizer: torch.optim.Optimizer = None
 
 class model_MMLP(nn.Module, model_base):
     """
@@ -53,7 +53,7 @@ class model_MMLP(nn.Module, model_base):
             
     def forward(self, input:torch.Tensor)->Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # do not clip output
-        return self.mdls["next"](input), self.mdls["rew"](input), self.mdls["done"](input)
+        return self.mdls["rew"].net(input), self.mdls["next"].net(input),  self.mdls["done"].net(input)
 
     def train(self, replay_buffer:ReplayBuffer, epoches=1e3, 
                 eval_round:int=1000, eval_func:Callable[[model_base, int], Union[dict, str]]=None,
@@ -63,17 +63,17 @@ class model_MMLP(nn.Module, model_base):
         save_round = int(save_round)
         # norm_func = torch.tanh
         pbar = tqdm.tqdm(range(int(epoches)))
-        pbar.set_description("Train MLP....")
+        pbar.set_description("Train MMLP....")
         for epoch in pbar:
             state, action, reward, next_state, not_done = replay_buffer.sample(self.batch_size)
 
             cur_real = torch.cat([state, action], 1)
             for key, pair in self.mdls.items():
                 pair.optimizer.zero_grad()
-            p_next, p_rew, p_done = self.forward(cur_real)
+            p_rew, p_next, p_done = self.forward(cur_real)
 
             self.mdls["next"].loss_f(next_state, p_next)
-            self.mdls["red" ].loss_f(reward, p_rew)
+            self.mdls["rew" ].loss_f(reward, p_rew)
             self.mdls["done"].loss_f(not_done, p_done)
 
             for key, pair in self.mdls.items():

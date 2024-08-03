@@ -10,7 +10,7 @@ def get_config(algorithm="PRDC"):
     # Experiment
     parser.add_argument("--policy", default=algorithm)  # Policy name
     parser.add_argument(
-        "--env_id", default="walker2d-random-v2"
+        "--env_id", default="hopper-medium-v2"
     )  # OpenAI gym environment name
     parser.add_argument(
         "--seed", default=1024, type=int

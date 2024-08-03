@@ -32,7 +32,8 @@ class model_MLP(nn.Module, model_base):
 
     def forward(self, input:torch.Tensor):
         # do not clip output
-        return self.model(input)
+        ret:torch.Tensor = self.model(input)
+        return ret[:, 0:1], ret[:, 1:-1], ret[:, -2:-1]
 
     def train(self, replay_buffer:ReplayBuffer, epoches=1e3, 
                 eval_round:int=1000, eval_func:Callable[[model_base, int], Union[dict, str]]=None,
@@ -49,6 +50,7 @@ class model_MLP(nn.Module, model_base):
             cur_real = torch.cat([state, action], 1)
             next_real = torch.cat([reward, next_state, not_done], 1)
             next_pred = self.forward(cur_real)
+            next_pred = torch.cat(next_pred, 1)
 
             loss:torch.Tensor = self.loss_f(next_real, next_pred)
             loss.backward()

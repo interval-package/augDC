@@ -9,8 +9,7 @@ import gym
 import tqdm
 from typing import Literal, Union
 from simulator.simulator_base import simulator_base
-
-import simulator.model.model_base as models
+import simulator.model as models
 
 path_script = os.path.abspath(__file__)
 
@@ -27,12 +26,21 @@ def get_simulator_folder(env_id, model_type, ftime:str=None):
         os.makedirs(ret)
     return ret
 
-def get_simulator_path(env_id, model_type, iter:int=None, ftype="pkl"):
-    folder_name = get_simulator_folder(env_id, model_type)
+def get_model_folder(env_id, model_type, ftime:str=None):
+    folder_name = f"simulator_{env_id}_{model_type}"
+    if ftime is not None:
+        folder_name = folder_name + f"_{ftime}"
+    ret = os.path.join(path_simulator_buffer, folder_name, "saved_mdls")
+    if not os.path.exists(ret):
+        os.makedirs(ret)
+    return ret
+
+def get_model_path(env_id, model_type, iter:int=None, ftype="pkl"):
+    folder_name = get_model_folder(env_id, model_type)
     if iter is None:
-        ret = os.path.join(folder_name, f"simulator.{ftype}")
+        ret = os.path.join(folder_name, f"model.{ftype}")
     else:
-        ret = os.path.join(folder_name, f"simulator_{iter}.{ftype}")
+        ret = os.path.join(folder_name, f"model_{iter}.{ftype}")
     return ret
 
 def calc_cosine_similarity(vector1, vector2):
@@ -57,7 +65,7 @@ class simulator_learn(simulator_base):
         super().__init__(env_id, env)
         self.model_type = model_type
         self.model_config = model_config
-        self.path_model = get_simulator_path(self.env_id, self.model_type)
+        self.path_model = get_model_path(self.env_id, self.model_type)
 
         self.env_model:models.model_base = None
         # self.load_model(env_id, model_type)
@@ -119,7 +127,7 @@ class simulator_learn(simulator_base):
             r_mdl, s_mdl, d_mdl, _ = self.roll_out_step(s_init, act)
             r_acc = r_acc + np.abs(r_mdl.detach().numpy() - r_env)
             # cosine similarity
-            cos_sim = calc_cosine_similarity(s_mdl.detach().numpy(), s_env)
+            cos_sim = np.abs(calc_cosine_similarity(s_mdl.detach().numpy(), s_env))
             s_acc = s_acc + cos_sim
             d_acc = d_acc + np.abs(d_mdl.detach().numpy() - d_env)
 
@@ -148,7 +156,8 @@ class simulator_learn(simulator_base):
         """
         input = torch.cat([state, action], 1)
         output:torch.Tensor = self.env_model.forward(input)
-        reward, n_state, done = output[:, 1], output[:, 1:-1], output[:, -1]
+        # reward, n_state, done = output[:, 1], output[:, 1:-1], output[:, -1]
+        reward, n_state, done = output
         return reward, n_state, done, {}
 
     @torch.no_grad()
@@ -166,6 +175,6 @@ class simulator_learn(simulator_base):
             pickle.dump(self.env_model, f)
 
         if iter is not None:
-            path_model = get_simulator_path(self.env_id, self.model_type, iter=iter)
+            path_model = get_model_path(self.env_id, self.model_type, iter=iter)
             with open(path_model, "wb") as f:
                 pickle.dump(self.env_model, f)

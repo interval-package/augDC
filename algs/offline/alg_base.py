@@ -22,8 +22,8 @@ class AlgBase(object):
         actor_lr=3e-4,
         critic_lr=3e-4,
         alpha=2.5,
-        beta=2,  # [beta* state, action]
-        k=1,
+        # beta=2,  # [beta* state, action]
+        # k=1,
         **kwargs
     ):
         self.device = torch.device(device)
@@ -42,12 +42,12 @@ class AlgBase(object):
         self.policy_freq = policy_freq
         self.alpha = alpha
 
-        self.k = k
+        # self.k = k
         self.total_it = 0
         # KD-Tree
-        self.beta = beta
+        # self.beta = beta
         self.data = data
-        self.kd_tree = KDTree(data)
+        # self.kd_tree = KDTree(data)
 
         self.models = {
             "actor": self.actor,

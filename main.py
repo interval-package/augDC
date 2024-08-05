@@ -3,21 +3,26 @@ import time
 import os
 import d4rl
 
+import algs.offline
 from utils.eval import eval_policy
 from utils.config import get_config, save_config
 from utils.logger import get_logger, get_writer
 from utils.buffer import ReplayBuffer
-from algs.prdc import PRDC
+import algs
+path_script = os.path.abspath(__file__)
 
-if __name__ == "__main__":
+path_folder = os.path.dirname(path_script)
+
+dir_out = os.path.join(path_folder, "result")
+if not os.path.exists(dir_out):
+    os.makedirs(dir_out, exist_ok=True)
+
+def main_offline_train():
     start_time = time.time()
 
-    out = "result"
-    os.makedirs(out, exist_ok=True)
-
-    args, env, kwargs = get_config("PRDC")
-    result_dir = os.path.join(
-        out,
+    args, env, kwargs = get_config()
+    dir_result = os.path.join(
+        dir_out,
         time.strftime("%m-%d-%H:%M:%S")
         + "_"
         + args.policy
@@ -27,23 +32,23 @@ if __name__ == "__main__":
         + str(args.seed),
     )
 
-    writer = get_writer(result_dir)
+    writer = get_writer(dir_result)
 
     file_name = f"{args.policy}_{args.env_id}_{args.seed}"
-    logger = get_logger(os.path.join(result_dir, file_name + ".log"))
+    logger = get_logger(os.path.join(dir_result, file_name + ".log"))
     logger.info(
         f"Policy: {args.policy}, Env: {args.env_id}, Seed: {args.seed}, Info: {args.info}"
     )
 
     # save configs
-    save_config(args, os.path.join(result_dir, "config.txt"))
+    save_config(args, os.path.join(dir_result, "config.txt"))
 
     # load model
     if args.load_model != "default":
         model_name = args.load_model
     else:
         model_name = file_name
-    ckpt_dir = os.path.join(result_dir, "ckpt")
+    ckpt_dir = os.path.join(dir_result, "ckpt")
     os.makedirs(ckpt_dir, exist_ok=True)
     model_path = os.path.join(ckpt_dir, model_name + ".pth")
     
@@ -58,14 +63,13 @@ if __name__ == "__main__":
     actions = replay_buffer.action
     data = np.hstack([args.beta * states, actions])
 
-    ## TODO The kd tree only considers the state and action pair, need to update
-
-    policy = PRDC(data, **kwargs)
+    policy:algs.offline.AlgBase = getattr(algs.offline, args.policy)(data, **kwargs)
 
     evaluations = []
-    evaluation_path = os.path.join(result_dir, file_name + ".npy")
+    evaluation_path = os.path.join(dir_result, file_name + ".npy")
     if os.path.exists(model_path):
         policy.load(model_path)
+
     for t in range(int(args.max_timesteps)):
         result = policy.train(replay_buffer, args.batch_size)
         for key, value in result.items():
@@ -100,3 +104,10 @@ if __name__ == "__main__":
     np.save(evaluation_path, evaluations)
     end_time = time.time()
     logger.info(f"Total Time: {end_time - start_time}")
+
+def main_online_fintune():
+    pass
+
+if __name__ == "__main__":
+    main_offline_train()
+    pass

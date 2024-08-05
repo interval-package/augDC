@@ -1,4 +1,4 @@
-from algs.alg_base import AlgBase
+from algs.offline import PRDC
 import torch
 import torch.nn.functional as F
 from simulator.simulator_learn import simulator_base, simulator_learn
@@ -6,7 +6,7 @@ from net.actor import Actor
 from net.critic import Critic
 from typing import Tuple
 
-class ancdc(AlgBase):
+class AncDC(PRDC):
     """
     Add Anchor to speed up process.
     """

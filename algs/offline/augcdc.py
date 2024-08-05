@@ -1,4 +1,4 @@
-from algs.alg_base import AlgBase
+from algs.offline import AlgBase
 import torch
 import torch.nn.functional as F
 from simulator.simulator_learn import simulator_base, simulator_learn
@@ -11,13 +11,13 @@ from utils.grad import get_network_grad
 
 _datatuple = Tuple[torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,]
 
-class AugDC(AlgBase):
+class AugCDC(AlgBase):
     def __init__(self, data, simulator, **kwargs):
         super().__init__(data, **kwargs)
         self.simulator:simulator_learn = simulator
 
     @torch.no_grad()
-    def augData_actor(self, init_state:torch.Tensor, actor:Actor, augBatch=256):
+    def augData_batch(self, init_state:torch.Tensor, actor:Actor, augBatch=256):
         """
         Using the actor virtually rollout N-step.
         Init state has batch dimension.
@@ -75,9 +75,16 @@ class AugDC(AlgBase):
         _, idx = self.kd_tree.query(key, k=[self.k], workers=-1)
         return idx
 
-    def _calc_nearest_neighbor_idx_tuple(self, data:_datatuple):
+    def _calc_nearest_neighbor_idx_tuple(self, data:_datatuple)->Tuple[_datatuple, float, int]:
         state, action, reward, next_state, not_done = data
-        return self._calc_nearest_neighbor_idx(state, action)
+        key = torch.cat([self.beta * state, action], dim=1).detach().cpu().numpy()
+        dis, idx = self.kd_tree.query(key, k=[self.k], workers=-1)
+        nearest_neightbour = (
+            torch.tensor(self.data[idx][:, :, -self.action_dim :])
+            .squeeze(dim=1)
+            .to(self.device)
+        )
+        return 
 
     def calc_actor_loss(self, data:_datatuple):
         state, action, reward, next_state, not_done = data
@@ -97,56 +104,50 @@ class AugDC(AlgBase):
         # state, action, reward, next_state, not_done = replay_buffer.sample(batch_size)
         sampledTuple:_datatuple = replay_buffer.sample(batch_size)
 
-        AugTuple:_datatuple = self.augDataTuple(sampledTuple, self.actor)
+        augTuple:_datatuple = self.augDataTuple(sampledTuple, self.actor)
 
-        critic_loss = self._calc_loss_critic(sampledTuple)
+        self.critic_optimizer.zero_grad()
+        critic_loss_sampled = self._calc_loss_critic(sampledTuple)
+        critic_loss_sampled.backward()
+        grad_sampled = get_network_grad(self.critic)
 
-        tb_statics.update({"critic_loss": critic_loss.item()})
+        self.critic_optimizer.zero_grad()
+        critic_loss_aug = self._calc_loss_critic(augTuple)
+        critic_loss_aug.backward()
+        grad_aug = get_network_grad(self.critic)
+
+        self.critic_optimizer.zero_grad()
+
+        # tb_statics.update({"critic_loss": critic_loss.item()})
 
         # Optimize the critic
-        self.critic_optimizer.zero_grad()
-        critic_loss.backward()
-        self.critic_optimizer.step()
+
 
         # Delayed policy updates
         if self.total_it % self.policy_freq == 0:
 
-            grad_list = []
-            self.actor_optimizer.zero_grad()
-            actor_loss, sampled_pi = self.calc_actor_loss(sampledTuple)
-            actor_loss.backward()
-            sampled_grad = get_network_grad(self.actor)
-            grad_list.append(sampled_grad)
+            # only using sampled data update actor
+            state, action, reward, next_state, not_done = sampledTuple
 
-            self.actor_optimizer.zero_grad()
-            actor_loss, aug_pi = self.calc_actor_loss(AugTuple)
-            actor_loss.backward()
-            aug_grad = get_network_grad(self.actor)
-            grad_list.append(aug_grad)
+            # Compute actor loss
+            pi = self.actor(state)
+            Q = self.critic.Q1(state, pi)
+            lmbda = self.alpha / Q.abs().mean().detach()
+            actor_loss = -lmbda * Q.mean()
 
-            self.actor_optimizer.zero_grad()
-
-            idx = self._calc_nearest_neighbor_idx_tuple(sampledTuple)
-
-            idx_aug = self._calc_nearest_neighbor_idx_tuple(AugTuple)
-
+            ## Get the nearest neighbor
+            key = torch.cat([self.beta * state, pi], dim=1).detach().cpu().numpy()
+            _, idx = self.kd_tree.query(key, k=[self.k], workers=-1)
             ## Calculate the regularization
-            nearest_neightbour_sampled = (
+            nearest_neightbour = (
                 torch.tensor(self.data[idx][:, :, -self.action_dim :])
                 .squeeze(dim=1)
                 .to(self.device)
             )
-            nearest_neightbour_aug = (
-                torch.tensor(self.data[idx_aug][:, :, -self.action_dim :])
-                .squeeze(dim=1)
-                .to(self.device)
-            )
+            dc_loss = F.mse_loss(pi, nearest_neightbour)
 
-            dc_loss_sampled = F.mse_loss(sampled_pi, nearest_neightbour_sampled)
-            dc_loss_aug = F.mse_loss(aug_pi, nearest_neightbour_aug)
-
-            combined_loss = dc_loss_sampled + dc_loss_aug
             # Optimize the actor
+            combined_loss = actor_loss + dc_loss
             self.actor_optimizer.zero_grad()
             combined_loss.backward()
             self.actor_optimizer.step()

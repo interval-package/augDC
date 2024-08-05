@@ -2,11 +2,13 @@ import copy
 from scipy.spatial import KDTree
 import torch
 import torch.nn.functional as F
-from algs.alg_base import AlgBase
+from algs.offline import AlgBase
 
 class PRDC(AlgBase):
-    def __init__(self, data, **kwargs):
+    def __init__(self, data, k=1, **kwargs):
         super().__init__(data, **kwargs)
+        self.k = k
+        self.kd_tree = KDTree(data)
         pass
 
     def train(self, replay_buffer, batch_size=256):

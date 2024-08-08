@@ -10,3 +10,5 @@ __MACOSX/
 simulator/simulator_buffer/*
 
 runs/*
+
+docs/*

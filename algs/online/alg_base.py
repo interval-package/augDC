@@ -69,18 +69,29 @@ class AlgBaseOnline(AlgBase):
 
     def tensor_trans(self, data:Transition, env:gym.Env)->Transition:
         obs, action, rew, nobs, not_done = data
-        action      = self.np2tensor(action,    (-1, env.action_space.shape[0]))
-        rew         = self.np2tensor(rew,       (-1,1))
-        nobs        = self.np2tensor(nobs,      (-1, env.observation_space.shape[0]))
-        not_done    = self.np2tensor(not_done,  (-1,1))
+        # action      = self.np2tensor(action,    (-1, env.action_space.shape[0]))
+        # rew         = self.np2tensor(rew,       (-1,1))
+        # nobs        = self.np2tensor(nobs,      (-1, env.observation_space.shape[0]))
+        # not_done    = self.np2tensor(not_done,  (-1,1))
         return (obs, action, rew, nobs, not_done)
 
-    def train(self, env:gym.Env, max_epi_len=100):
+    @staticmethod
+    def trans_obs(obs, mean, std):
+        obs = (np.array(obs).reshape(1, -1) - mean) / std
+        return obs
+
+    def train(
+            self, 
+            env:gym.Env,     
+            mean=0,
+            std=1,
+            max_epi_len=100
+            ):
         """
         Train a episode.
         """
         # Assert here env outputs done
-        obs:np.ndarray = env.reset().reshape((-1, env.observation_space.shape[0]))
+        obs:np.ndarray = self.trans_obs(env.reset(), mean, std)
         obs = torch.from_numpy(obs.astype(np.float32)).to(self.device)
         step = 0
         not_done = 1
@@ -89,6 +100,7 @@ class AlgBaseOnline(AlgBase):
             action:torch.Tensor = self.actor(obs)
             action = action.detach().numpy()
             nobs, rew, d, _ = env.step(action)
+            nobs = self.trans_obs(nobs, mean, std)
             not_done = 1 - d
             data = self.tensor_trans((obs, action, rew, nobs, not_done), env)
             self._compute_gradient(data)

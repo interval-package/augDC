@@ -2,11 +2,12 @@ import copy
 from scipy.spatial import KDTree
 import torch
 import torch.nn.functional as F
-from algs.offline import AlgBase
+from algs.offline import AlgBaseOffline
 
-class PRDC(AlgBase):
-    def __init__(self, data, k=1, **kwargs):
+class PRDC(AlgBaseOffline):
+    def __init__(self, data, beta=2, k=1, **kwargs):
         super().__init__(data, **kwargs)
+        self.beta=beta
         self.k = k
         self.kd_tree = KDTree(data)
         pass

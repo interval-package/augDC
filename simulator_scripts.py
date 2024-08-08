@@ -6,7 +6,7 @@ import pickle
 import d4rl
 
 from utils.buffer import ReplayBuffer
-from utils.config import get_config, save_config
+from utils.config import get_config_off, save_config
 from utils.logger import add_scalars
 
 from torch.utils.tensorboard import SummaryWriter
@@ -20,12 +20,12 @@ This script is used to train and test a simulator.
 """
 
 def exp_train():
-    args, env, kwargs = get_config("PRDC")
+    args, env, kwargs = get_config_off("PRDC")
     train_model(args.env_id, env, args, kwargs, model_type="MLP")
     train_model(args.env_id, env, args, kwargs, model_type="MMLP")
 
 def exp_test(model_type="MLP"):
-    args, env, kwargs = get_config("PRDC")
+    args, env, kwargs = get_config_off("PRDC")
     sim = simulator_learn(env_id=args.env_id, env=env, model_type=model_type)
     sim.load_model(model_type)
     test_simulator(env, sim)

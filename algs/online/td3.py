@@ -4,11 +4,12 @@ import torch
 from net.actor import Actor
 from net.critic import DuelCritic
 
-# Warning the critic is the duel critic, not usable for DDPG
-class DDPG(AlgBaseOnline):
-    def __init__(self, **kwargs) -> None:
-        raise NotImplementedError("The DDPG requires single critic.")
+class TD3(AlgBaseOnline):
+    def __init__(self, 
+                 gamma = 0.99,
+                 **kwargs) -> None:
         super().__init__(**kwargs)
+        self.gamma = 0.99
         self.actor_target = copy.deepcopy(self.actor)
         self.critic_target = copy.deepcopy(self.critic)
 
@@ -26,7 +27,7 @@ class DDPG(AlgBaseOnline):
     def _compute_gradient(self, data: Transition):
         self.critic_optimizer.zero_grad()
         state, a, r, next_state, not_done = data
-        loss_q, q = self._compute_loss_q(state, a, r, next_state, not_done)
+        loss_q, _, _ = self._compute_loss_q(state, a, r, next_state, not_done)
         loss_q.backward()
 
         self.close_critic_grad()
@@ -34,7 +35,7 @@ class DDPG(AlgBaseOnline):
         loss_policy = self._compute_loss_policy(state)
         loss_policy.backward()
         self.open_critic_grad()
-        return
+        return {}
     
     def _update(self, iteration):
         polyak = 1 - self.tau
@@ -59,21 +60,36 @@ class DDPG(AlgBaseOnline):
                 p_targ.data.add_((1 - polyak) * p.data)
         pass
 
-    def _compute_loss_q(self, state, action, rew, next_state, not_done):
-        # Q-values
-        Q = self.critic(state, action)
+    def _compute_loss_q(self, o, a, r, o2, d):
+        q1, q2 = self.critic(o, a)
 
-        # Target Q-values
-        q_policy_targ = self.critic_target(next_state, self.actor_target(next_state))
-        breakpoint()
-        backup = rew + self.discount * not_done * q_policy_targ
+        # Bellman backup for Q functions
+        with torch.no_grad():
+            pi_targ = self.actor(o2)
+            # Target policy smoothing
+            epsilon = torch.randn_like(pi_targ) * self.policy_noise
+            epsilon = torch.clamp(epsilon, -self.noise_clip, self.noise_clip)
+            a2 = pi_targ + epsilon
+            a2 = torch.clamp(
+                a2,
+                torch.tensor(-self.max_action).to(a2.device),
+                torch.tensor(self.max_action).to(a2.device),
+            )
+
+            # Target Q-values
+            q1_pi_targ, q2_pi_targ = self.critic_target(o2, a2)
+            q_pi_targ = torch.min(q1_pi_targ, q2_pi_targ)
+            backup = r + self.gamma * (1 - d) * q_pi_targ
 
         # MSE loss against Bellman backup
-        loss_q = ((Q - backup) ** 2).mean()
-        return loss_q, torch.mean(Q)
+        loss_q1 = ((q1 - backup) ** 2).mean()
+        loss_q2 = ((q2 - backup) ** 2).mean()
+        loss_q = loss_q1 + loss_q2
 
-    def _compute_loss_policy(self, state):
-        q_policy = self.critic(state, self.networks.policy(state))
-        return -q_policy.mean()
+        return loss_q, loss_q1, loss_q2
+
+    def _compute_loss_policy(self, o):
+        q1_pi, q2_pi = self.critic(o, self.actor(o))
+        return -q1_pi.mean()
 
     pass

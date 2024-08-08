@@ -1,9 +1,9 @@
-from algs.offline import AlgBase
+from algs.offline import AlgBaseOffline
 import torch
 import torch.nn.functional as F
 from simulator.simulator_learn import simulator_base, simulator_learn
 from net.actor import Actor
-from net.critic import Critic
+from net.critic import DuelCritic
 from typing import Tuple
 from copy import deepcopy
 
@@ -11,7 +11,7 @@ from utils.grad import get_network_grad
 
 _datatuple = Tuple[torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,]
 
-class AugCDC(AlgBase):
+class AugCDC(AlgBaseOffline):
     def __init__(self, data, simulator, **kwargs):
         super().__init__(data, **kwargs)
         self.simulator:simulator_learn = simulator

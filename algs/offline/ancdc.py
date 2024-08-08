@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from simulator.simulator_learn import simulator_base, simulator_learn
 from net.actor import Actor
-from net.critic import Critic
+from net.critic import DuelCritic
 from typing import Tuple
 
 class AncDC(PRDC):

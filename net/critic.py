@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Critic(nn.Module):
+class DuelCritic(nn.Module):
     def __init__(self, state_dim, action_dim):
-        super(Critic, self).__init__()
+        super(DuelCritic, self).__init__()
         self.l1 = nn.Linear(state_dim + action_dim, 256)
         self.l2 = nn.Linear(256, 256)
         self.l3 = nn.Linear(256, 1)

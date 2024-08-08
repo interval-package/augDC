@@ -1,21 +1,26 @@
 from abc import abstractmethod
 import copy
+import numpy as np
 from scipy.spatial import KDTree
 import torch
 import torch.nn.functional as F
 from net.actor import Actor
-from net.critic import Critic
+from net.critic import DuelCritic
 from typing import Tuple, Union, Literal
+import gym
+from algs import AlgBase
 
 # state, action, reward, state_next, not_done
 Transition = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,]
 
-class AlgBase(object):
+class AlgBaseOnline(AlgBase):
 
     def __init__(self, 
                 env,
-                actor:Actor, critic:Critic, max_action,
-                device="cpu", 
+                state_dim,
+                action_dim,
+                max_action,
+                device,
                 discount=0.99,
                 tau=0.005,
                 policy_noise=0.2,
@@ -23,12 +28,13 @@ class AlgBase(object):
                 policy_freq=2,
                 actor_lr=3e-4,
                 critic_lr=3e-4,
-                alpha=2.5,
+                # alpha=2.5,
+                **kwargs
                 ) -> None:
         self.env = env
         self.device = torch.device(device)
-        self.actor = actor.to(self.device)
-        self.critic = critic.to(self.device)
+        self.actor = Actor(state_dim, action_dim, max_action).to(self.device)
+        self.critic = DuelCritic(state_dim, action_dim).to(self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
         self.max_action = max_action
@@ -37,33 +43,73 @@ class AlgBase(object):
         self.policy_noise = policy_noise
         self.noise_clip = noise_clip
         self.policy_freq = policy_freq
-        self.alpha = alpha
-        # self.policy_target = copy.deepcopy(policy)
-        # self.critic_target = copy.deepcopy(critic)
+        # self.alpha = alpha
+
+        self.models = {
+            "actor": self.actor,
+            "critic": self.critic,
+            "actor_optimizer": self.actor_optimizer,
+            "critic_optimizer": self.critic_optimizer,
+        }
+
         pass
 
-    def train(self):
-        # TODO online exploration
-        pass
+    @staticmethod
+    def np2tensor(tar, shape):
+        if isinstance(tar, int):
+            return torch.tensor([[tar]])
+        if isinstance(tar, np.float64):
+            return torch.tensor([[tar.astype(np.float32)]])
+        elif isinstance(tar, np.ndarray):
+            return torch.from_numpy(tar.reshape(shape).astype(np.float32))
+        elif isinstance(tar, torch.Tensor):
+            return tar
+        else:
+            raise TypeError(f"get invalid type: {type(tar)}")
 
-    # TODO check the classmethod using the child class init or not
-    @classmethod
-    def from_offline(cls, env,off_alg):
-        return cls(env, off_alg.actor, off_alg.critic, off_alg.max_action, off_alg.device)
+    def tensor_trans(self, data:Transition, env:gym.Env)->Transition:
+        obs, action, rew, nobs, not_done = data
+        action      = self.np2tensor(action,    (-1, env.action_space.shape[0]))
+        rew         = self.np2tensor(rew,       (-1,1))
+        nobs        = self.np2tensor(nobs,      (-1, env.observation_space.shape[0]))
+        not_done    = self.np2tensor(not_done,  (-1,1))
+        return (obs, action, rew, nobs, not_done)
 
-    @classmethod
-    def from_scratch(cls, 
-        env,
-        state_dim,
-        action_dim,
-        max_action,
-        device,
-        **kwargs
-    ):
-        device = torch.device(device)
-        actor = Actor(state_dim, action_dim, max_action).to(device)
-        critic = Critic(state_dim, action_dim).to(device)
-        return cls(env, actor, critic, device)
+    def train(self, env:gym.Env, max_epi_len=100):
+        """
+        Train a episode.
+        """
+        # Assert here env outputs done
+        obs:np.ndarray = env.reset().reshape((-1, env.observation_space.shape[0]))
+        obs = torch.from_numpy(obs.astype(np.float32)).to(self.device)
+        step = 0
+        not_done = 1
+        tt_rew = 0
+        while not_done and step < max_epi_len:
+            action:torch.Tensor = self.actor(obs)
+            action = action.detach().numpy()
+            nobs, rew, d, _ = env.step(action)
+            not_done = 1 - d
+            data = self.tensor_trans((obs, action, rew, nobs, not_done), env)
+            self._compute_gradient(data)
+            self._update(step)
+            tt_rew += rew
+            step += 1
+            obs = data[3]
+
+        tb_info = {
+            "epi_len": step,
+            "total_rew": tt_rew
+        }
+        return tb_info
+
+    @abstractmethod
+    def _compute_gradient(self, data: Transition):
+        ...
+
+    @abstractmethod
+    def _update(self, iteration):
+        ...
 
     @property
     def adjustable_params(self):

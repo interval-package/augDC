@@ -3,10 +3,11 @@ from scipy.spatial import KDTree
 import torch
 import torch.nn.functional as F
 from net.actor import Actor
-from net.critic import Critic
+from net.critic import DuelCritic
 from typing import Tuple, Union, Literal
+from algs import AlgBase
 
-class AlgBase(object):
+class AlgBaseOffline(AlgBase):
     def __init__(
         self,
         data,
@@ -30,7 +31,7 @@ class AlgBase(object):
         self.actor = Actor(state_dim, action_dim, max_action).to(self.device)
         self.actor_target = copy.deepcopy(self.actor)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
-        self.critic = Critic(state_dim, action_dim).to(self.device)
+        self.critic = DuelCritic(state_dim, action_dim).to(self.device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
         self.action_dim = action_dim
@@ -59,22 +60,6 @@ class AlgBase(object):
         }
 
         print("state_dim:", state_dim, ", action_dim: ", action_dim)
-
-    @torch.no_grad()
-    def select_action(self, state):
-        state = torch.FloatTensor(state.reshape(1, -1)).to(self.device)
-        return self.actor(state).cpu().data.numpy().flatten()
-
-    def save(self, model_path):
-        state_dict = dict()
-        for model_name, model in self.models.items():
-            state_dict[model_name] = model.state_dict()
-        torch.save(state_dict, model_path)
-
-    def load(self, model_path):
-        state_dict = torch.load(model_path)
-        for model_name, model in self.models.items():
-            model.load_state_dict(state_dict[model_name])
 
     def _calc_loss_critic(self, 
                       trans_t:Tuple[torch.Tensor, torch.Tensor, 

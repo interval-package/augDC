@@ -116,10 +116,10 @@ def get_config_on(algorithm="TD3"):
         "--eval_freq", default=1e3, type=int
     )  # How often (time steps) we evaluate
     parser.add_argument(
-        "--save_model_freq", default=50, type=int
+        "--save_model_freq", default=1e6, type=int
     )  # How often (time steps) we save model
     parser.add_argument(
-        "--max_episode", default=1e5, type=int
+        "--max_episode", default=1e6, type=int
     )  # Max time steps to run environment
     parser.add_argument(
         "--save_model", default=False

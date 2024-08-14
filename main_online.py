@@ -111,6 +111,6 @@ def main_online_fintune(args, env: gym.Env, kwargs):
 
 if __name__ == "__main__":
     args, env, kwargs = get_config_on()
-    # args.load_model = os.path.join("result", "buffer", args.env_id, "model.pth")
+    args.load_model = os.path.join("result", "buffer", args.env_id, "model.pth")
     main_online_fintune(args, env, kwargs)
     pass

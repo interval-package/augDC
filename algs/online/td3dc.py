@@ -19,15 +19,25 @@ class TD3DC(TD3):
     def _compute_loss_policy(self, state):
         pi = self.actor(state)
         q1_pi, q2_pi = self.critic(state, pi)
+        lmbda = self.alpha / q1_pi.abs().mean().detach()
+        actor_loss = -lmbda * q1_pi.mean()
+
         key = torch.cat([self.beta * state, pi], dim=1).detach().cpu().numpy()
         _, idx = self.kd_tree.query(key, k=[self.k], workers=-1)
-        ## Calculate the regularization
         nearest_neightbour = (
             torch.tensor(self.data[idx][:, :, -self.action_dim :])
             .squeeze(dim=1)
             .to(self.device)
         )
+
         dc_loss = F.mse_loss(pi, nearest_neightbour)
-        return -q1_pi.mean()
+
+        info = {
+            "lmbda": lmbda.item(),
+            "actor_loss": actor_loss.item(),
+            "dc_loss": dc_loss.item()
+        }
+
+        return actor_loss+dc_loss, info
 
     pass

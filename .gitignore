@@ -8,6 +8,7 @@ __MACOSX/
 *json
 
 simulator/simulator_buffer/*
+scripts.sh
 
 runs/*
 

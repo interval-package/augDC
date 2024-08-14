@@ -19,10 +19,10 @@ def get_config_off(algorithm="PRDC"):
         "--eval_freq", default=1000, type=int
     )  # How often (time steps) we evaluate
     parser.add_argument(
-        "--save_model_freq", default=50000, type=int
+        "--save_model_freq", default=10000, type=int
     )  # How often (time steps) we save model
     parser.add_argument(
-        "--max_timesteps", default=5e5, type=int
+        "--max_timesteps", default=1e6, type=int
     )  # Max time steps to run environment
     parser.add_argument(
         "--save_model", default=True, action="store_true"
@@ -113,16 +113,16 @@ def get_config_on(algorithm="TD3"):
         "--seed", default=1024, type=int
     )  # Sets Gym, PyTorch and Numpy seeds
     parser.add_argument(
-        "--eval_freq", default=1, type=int
+        "--eval_freq", default=1e3, type=int
     )  # How often (time steps) we evaluate
     parser.add_argument(
         "--save_model_freq", default=50, type=int
     )  # How often (time steps) we save model
     parser.add_argument(
-        "--max_episode", default=300, type=int
+        "--max_episode", default=1e5, type=int
     )  # Max time steps to run environment
     parser.add_argument(
-        "--save_model", default=True
+        "--save_model", default=False
     )  # Save model and optimizer parameters
     # Fintune the offline policy or 
     parser.add_argument(

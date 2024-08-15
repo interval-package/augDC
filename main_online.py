@@ -104,7 +104,7 @@ def main_online_fintune(args, env: gym.Env, kwargs):
             for key, value in result.items():
                 writer.add_scalar("eval/" + key, value, global_step=t)
             logger.info("---------------------------------------")
-            logger.info(f"Time steps: {t + 1}, D4RL score: {result["d4rl_score"]}, Epi len: {result["epi_len"]}, Rew: {result["avg_reward"]}")
+            logger.info(f"Time steps: {t + 1}, D4RL score: {result['d4rl_score']}, Epi len: {result['epi_len']}, Rew: {result['avg_reward']}")
 
     pass
 

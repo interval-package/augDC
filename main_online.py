@@ -77,7 +77,7 @@ def main_online_fintune(args, env: gym.Env, kwargs):
         logger.info("Not loading model.")
 
     for t in range(int(args.max_episode)):
-        result = policy.train(env, step=t)
+        result = policy.train(env, step=t, max_epi_len=args.max_epi_len)
         for key, value in result.items():
             writer.add_scalar(key, value, global_step=t)
 
@@ -87,7 +87,7 @@ def main_online_fintune(args, env: gym.Env, kwargs):
             video_path = os.path.join(ckpt_dir, model_name + "_" + str(t + 1) + ".gif")
 
             if args.save_model and (t + 1) % args.save_model_freq == 0:
-                avg_reward, d4rl_score = eval_policy(
+                result = eval_policy(
                     policy,
                     args.env_id,
                     args.seed,
@@ -98,14 +98,13 @@ def main_online_fintune(args, env: gym.Env, kwargs):
                 )
                 policy.save(model_path)
             else:
-                avg_reward, d4rl_score = eval_policy(
+                result = eval_policy(
                     policy, args.env_id, args.seed, mean, std
                 )
-            writer.add_scalar("avg_reward", avg_reward, global_step=t)
-            writer.add_scalar("d4rl_score", d4rl_score, global_step=t)
-            evaluations.append(d4rl_score)
+            for key, value in result.items():
+                writer.add_scalar("eval/" + key, value, global_step=t)
             logger.info("---------------------------------------")
-            logger.info(f"Time steps: {t + 1}, D4RL score: {d4rl_score}, avg_reward: {avg_reward}")
+            logger.info(f"Time steps: {t + 1}, D4RL score: {result["d4rl_score"]}, Epi len: {result["epi_len"]}, Rew: {result["avg_reward"]}")
 
     pass
 

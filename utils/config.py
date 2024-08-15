@@ -122,6 +122,9 @@ def get_config_on(algorithm="TD3"):
         "--max_episode", default=1e6, type=int
     )  # Max time steps to run environment
     parser.add_argument(
+        "--max_epi_len", default=1e3, type=int
+    )  # The online exploration length
+    parser.add_argument(
         "--save_model", default=False
     )  # Save model and optimizer parameters
     # Fintune the offline policy or 

@@ -21,8 +21,10 @@ def eval_policy(
 
     avg_reward = 0.0
     ep_obs = []
+    epi_len = 0
     for _ in range(eval_episodes):
         state, done = eval_env.reset(), False
+        step = 0
         while not done:
             if save_gif and _ < 0:
                 obs = eval_env.render(mode="rgb_array")
@@ -31,11 +33,20 @@ def eval_policy(
             action = policy.select_action(state)
             state, reward, done, __ = eval_env.step(action)
             avg_reward += reward
+            step += 1
+        epi_len += step
 
     avg_reward /= eval_episodes
+    epi_len /= eval_episodes
     d4rl_score = eval_env.get_normalized_score(avg_reward) * 100
     if save_gif:
         with imageio.get_writer(video_path, fps=fps) as writer:
             for obs in ep_obs:
                 writer.append_data(obs)
-    return avg_reward, d4rl_score
+
+    info = {
+        "avg_reward": avg_reward,
+        "d4rl_score": d4rl_score,
+        "epi_len": epi_len
+    }
+    return info

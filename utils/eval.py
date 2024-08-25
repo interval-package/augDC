@@ -3,7 +3,7 @@ import d4rl
 import numpy as np
 import imageio
 
-fps = 60
+fps = 30
 
 def eval_policy(
     policy,
@@ -26,7 +26,7 @@ def eval_policy(
         state, done = eval_env.reset(), False
         step = 0
         while not done:
-            if save_gif and _ < 0:
+            if save_gif and _ == 0:
                 obs = eval_env.render(mode="rgb_array")
                 ep_obs.append(obs)
             state = (np.array(state).reshape(1, -1) - mean) / std

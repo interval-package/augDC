@@ -95,6 +95,17 @@ class AlgBaseOnline(AlgBase):
             std=1,
             max_epi_len=100
             ):
+
+        return
+
+    def _train(
+            self, 
+            env:gym.Env,
+            step:int, 
+            mean=0,
+            std=1,
+            max_epi_len=100
+            ):
         """
         Train a episode.
         """

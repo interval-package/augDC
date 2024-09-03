@@ -7,9 +7,9 @@ __MACOSX/
 *.pkl
 *json
 
-simulator/simulator_buffer/*
+simulator/simulator_buffer/**
 scripts.sh
 
-runs/*
+runs/**
 
-docs/*
+docs/**

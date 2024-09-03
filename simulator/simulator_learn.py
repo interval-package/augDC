@@ -89,6 +89,7 @@ class simulator_learn(simulator_base):
             self.env_model = ret
         else:
             print(f"Model not exists at {self.path_model}")
+            raise NotImplementedError("Do not allow empty load yet.")
             self.env_model:models.model_base = getattr(models, f"model_{model_type}")(**self.model_config)
             self.env_model.train()
             self.save()

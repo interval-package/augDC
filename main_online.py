@@ -9,7 +9,7 @@ import algs.online
 from utils.eval import eval_policy
 from utils.config import get_config_on, save_config
 from utils.logger import get_logger, get_writer
-from utils.buffer import ReplayBuffer
+from utils.buffer import ReplayBuffer, OnlineSampler
 import algs
 path_script = os.path.abspath(__file__)
 
@@ -17,6 +17,10 @@ path_folder = os.path.dirname(path_script)
 
 dir_out_on  = os.path.join(path_folder, "result", "online")
 
+"""
+Trainning with online finetuning not only straightly train with online data, 
+it also could be a combine of each
+"""
 
 def main_online_fintune(args, env: gym.Env, kwargs):
     dir_result = os.path.join(
@@ -55,12 +59,23 @@ def main_online_fintune(args, env: gym.Env, kwargs):
     args.load_model = load_model
     save_config(args, os.path.join(dir_result, "config.txt"))
 
-    replay_buffer = ReplayBuffer(kwargs["state_dim"], kwargs["action_dim"], args.device, args.env_id, args.scale, args.shift)
+    rep_config = {
+        "state_dim": kwargs["state_dim"], 
+        "action_dim": kwargs["action_dim"], 
+        "device": args.device, 
+        "env_id": args.env_id, 
+        "scale": args.scale, 
+        "shift": args.shift
+    }
+
+    replay_buffer = ReplayBuffer(**rep_config)
     replay_buffer.convert_D4RL(d4rl.qlearning_dataset(env))
     if args.normalize:
         mean, std = replay_buffer.normalize_states()
     else:
         mean, std = 0, 1
+
+    sampler = OnlineSampler(**rep_config)
 
     states = replay_buffer.state
     actions = replay_buffer.action
@@ -77,7 +92,7 @@ def main_online_fintune(args, env: gym.Env, kwargs):
         logger.info("Not loading model.")
 
     for t in range(int(args.max_episode)):
-        result = policy.train(env, step=t, max_epi_len=args.max_epi_len)
+        result = policy.train(step=t, max_epi_len=args.max_epi_len)
         for key, value in result.items():
             writer.add_scalar(key, value, global_step=t)
 

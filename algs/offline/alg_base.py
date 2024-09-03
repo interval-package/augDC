@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import copy
 from scipy.spatial import KDTree
 import torch
@@ -110,3 +111,7 @@ class AlgBaseOffline(AlgBase):
             target_param.data.copy_(
                 self.tau * param.data + (1 - self.tau) * target_param.data
             )
+
+    @abstractmethod
+    def train(self, **kwargs):
+        ...

@@ -2,18 +2,6 @@
 
 Code for ICML'23 paper "Policy Regularization with Dataset Constraint for Offline Reinforcement Learning", [arXiv link](https://arxiv.org/abs/2306.06569).
 
-If you find this repository useful for your research, please cite:
-
-```bib
-@inproceedings{
-    prdc,
-    title={Policy Regularization with Dataset Constraint for Offline Reinforcement Learning},
-    author={Yuhang Ran and Yi-Chen Li and Fuxiang Zhang and Zongzhang Zhang and Yang Yu},
-    booktitle={International Conference on Machine Learning},
-    year={2023}
-}
-```
-
 ## Install dependency
 
 ```bash
@@ -52,4 +40,33 @@ python main.py --env_id antmaze-medium-play-v2 --seed 1024 --device cuda:0 --alp
 
 ```bash
 tensorboard --logdir='./result'
+```
+
+## fixing install errors
+
+### d4rl errors
+
+The following commands are useful when import d4rl
+
+```bash
+pip install "cython<3"
+apt-get install libosmesa6-dev
+apt-get install patchelf
+```
+
+if cannot make mujoco envs try:
+
+```bash
+pip install six
+```
+
+because the d4rl do not register it due to sone error
+
+### gym errors
+
+The gym assert to be 0.21.0, so following command will replace the pip version
+
+```bash
+pip install wheel==0.38.4 setuptools==66.0.0
+pip install "pip<24.1"
 ```

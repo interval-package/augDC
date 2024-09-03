@@ -23,7 +23,7 @@ def save_model_config(model_config:dict, path_model_config):
         json.dump(ret, f)
     return
 
-def train_model(env_id, env, obj_config, dict_config, model_type="MMLP"):
+def train_model(env_id, env, obj_config, dict_config, model_type="MMLP", save_model=True, **kwargs):
     path_sim_folder = get_simulator_folder(env_id, model_type)
     device = torch.device("cpu")
 
@@ -44,9 +44,10 @@ def train_model(env_id, env, obj_config, dict_config, model_type="MMLP"):
         return info
     
     def save_func(mdl:models.model_base, iter:int, **kwargs):
-        sim.set_model(mdl)
-        sim.save(iter)
-        return {"msg": f"Saved f{iter}."}
+        if save_model:
+            sim.set_model(mdl)
+            sim.save(iter)
+        return {"msg": f"Saved f{iter}." if save_model else "Not save."}
 
     model_config = {
         "mlp_shape": [state_dim + action_dim, 256, 256, state_dim + 2],

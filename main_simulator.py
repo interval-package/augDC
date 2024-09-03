@@ -19,10 +19,9 @@ from simulator.train import train_model, test_simulator
 This script is used to train and test a simulator.
 """
 
-def exp_train():
+def exp_train(model_type="MLP"):
     args, env, kwargs = get_config_off("PRDC")
-    train_model(args.env_id, env, args, kwargs, model_type="MLP")
-    train_model(args.env_id, env, args, kwargs, model_type="MMLP")
+    train_model(args.env_id, env, args, kwargs, model_type=model_type)
 
 def exp_test(model_type="MLP"):
     args, env, kwargs = get_config_off("PRDC")
@@ -33,8 +32,9 @@ def exp_test(model_type="MLP"):
 
 if __name__ == "__main__":
 
-    # exp_train()
-    exp_test("MLP")
-    exp_test("MMLP")
+    model_type = "MMLP"
+    exp_train(model_type)
+    # exp_test("MLP")
+    exp_test(model_type)
 
     pass

@@ -21,10 +21,9 @@ def main_offline_train(args, env, kwargs):
     start_time = time.time()
     dir_result = os.path.join(
         dir_out_off,
-        args.env_id,
+        args.env_id,  
+        args.policy,
         time.strftime("%m-%d-%H:%M:%S")
-        + "_"
-        + args.policy
         + "_"
         + str(args.seed),
     )
@@ -116,6 +115,6 @@ def main_offline_train(args, env, kwargs):
 
 
 if __name__ == "__main__":
-    args, env, kwargs = get_config_off("PRWIC")
+    args, env, kwargs = get_config_off("PRWIC", {"env_id": "walker2d-medium-v2"})
     main_offline_train(args, env, kwargs)
     pass

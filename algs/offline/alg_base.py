@@ -49,7 +49,7 @@ class AlgBaseOffline(AlgBase):
         self.total_it = 0
         # KD-Tree
         # self.beta = beta
-        self.data = data
+        # self.data = data
         # self.kd_tree = KDTree(data)
 
         self.models = {

@@ -76,3 +76,33 @@ The gym assert to be 0.21.0, so following command will replace the pip version
 pip install wheel==0.38.4 setuptools==66.0.0
 pip install "pip<24.1"
 ```
+
+## exps
+
+```python
+[
+    "Ant_maze_big-maze_noisy_multistart_True_multigoal_False_sparse_fixed",
+    "Ant_maze_big-maze_noisy_multistart_True_multigoal_False_sparse",
+    "Ant_maze_big-maze_noisy_multistart_True_multigoal_True_sparse_fixed",
+    "Ant_maze_big-maze_noisy_multistart_True_multigoal_True_sparse",
+    "Ant_maze_hardest-maze_noisy_multistart_True_multigoal_False_sparse",
+    "Ant_maze_hardest-maze_noisy_multistart_True_multigoal_True_sparse",
+    "Ant_maze_u-maze_noisy_multistart_False_multigoal_False_sparse_fixed",
+    "Ant_maze_u-maze_noisy_multistart_False_multigoal_False_sparse",
+    "Ant_maze_u-maze_noisy_multistart_True_multigoal_True_sparse_fixed",
+    "Ant_maze_u-maze_noisy_multistart_True_multigoal_True_sparse",
+    "halfcheetah_medium_expert-v2",
+    "halfcheetah_medium_replay-v2",
+    "halfcheetah_medium-v2",
+    "halfcheetah_random-v2",
+    "hopper_medium_expert-v2",
+    "hopper_medium_replay-v2",
+    "hopper_medium-v2",
+    "hopper_random-v2",
+    "maze2d-umaze-sparse-v1",
+    "walker2d_medium_expert-v2",
+    "walker2d_medium_replay-v2",
+    "walker2d_medium-v2",
+    "walker2d_random-v2",
+]
+```

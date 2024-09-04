@@ -14,13 +14,14 @@ class PRWIC(AlgBaseOffline):
                  guard_lr=0.01,
                  gamma=0.1,
                  **kwargs):
-        super().__init__(data, **kwargs)
+        super().__init__(**kwargs)
+        self.data=data
         self.beta=beta
         self.k = k
         self.kd_tree = KDTree(data)
         self.gamma = gamma
-        self.guard = DuelGuard(self.state_dim, self.action_dim)
-        self.guard_target = copy.deepcopy(self.guard)
+        self.guard = DuelGuard(self.state_dim, self.action_dim).to(self.device)
+        self.guard_target = copy.deepcopy(self.guard).to(self.device)
         self.guard_optimizer = torch.optim.Adam(self.guard.parameters(), lr=guard_lr)
         pass
 

@@ -6,11 +6,11 @@ import d4rl
 
 def override_args(args, config:dict):
     for key, val in config.items():
-        getattr(args, key) = val
+        setattr(args, key, val)
     return args
 
 
-def get_config_off(algorithm="PRDC", override={}):
+def get_config_off(algorithm="PRDC", config={}):
     parser = argparse.ArgumentParser()
     # Experiment
     parser.add_argument("--policy", default=algorithm)  # Policy name
@@ -74,7 +74,7 @@ def get_config_off(algorithm="PRDC", override={}):
     parser.add_argument("--k", default=1, type=int)
     args = parser.parse_args()
 
-    args = override(args, override)
+    args = override_args(args, config)
 
     env = gym.make(args.env_id)
 
@@ -109,7 +109,7 @@ def get_config_off(algorithm="PRDC", override={}):
 
     return args, env, kwargs
 
-def get_config_on(algorithm="TD3", override={}):
+def get_config_on(algorithm="TD3", config={}):
     parser = argparse.ArgumentParser()
     # Experiment
     parser.add_argument("--policy", default=algorithm)  # Policy name
@@ -177,7 +177,7 @@ def get_config_on(algorithm="TD3", override={}):
     parser.add_argument("--k", default=1, type=int)
     args = parser.parse_args()
 
-    args = override(args, override)
+    args = override_args(args, config)
 
     env = gym.make(args.env_id)
 

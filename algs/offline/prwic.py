@@ -133,3 +133,14 @@ class PRWIC(AlgBaseOffline):
             self._update_target()
 
         return tb_statics
+        
+    def _update_target(self):
+        super()._update_target()
+        for param, target_param in zip(
+            self.guard.parameters(), self.guard_target.parameters()
+        ):
+            target_param.data.copy_(
+                self.tau * param.data + (1 - self.tau) * target_param.data
+            )
+        
+        return 

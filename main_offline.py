@@ -60,10 +60,20 @@ def main_offline_train(args, env, kwargs):
         mean, std = 0, 1
 
     states = replay_buffer.state
+    next_states = replay_buffer.next_state
     actions = replay_buffer.action
-    data = np.hstack([args.beta * states, actions])
+    datasa = np.hstack([args.beta * states, actions])
+    datas = np.vstack([states, next_states])
 
-    policy:algs.offline.AlgBaseOffline = getattr(algs.offline, args.policy)(data, **kwargs)
+    more_args = {
+        "data": datasa,
+        "data_s": datas
+    }
+
+    performed_args = more_args
+    performed_args.update(kwargs)
+
+    policy:algs.offline.AlgBaseOffline = getattr(algs.offline, args.policy)(**performed_args)
 
     evaluations = []
     evaluation_path = os.path.join(dir_result, file_name + ".npy")

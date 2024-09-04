@@ -12,8 +12,8 @@ from utils.grad import get_network_grad
 _datatuple = Tuple[torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,]
 
 class AugDC(AlgBaseOffline):
-    def __init__(self, data, simulator, **kwargs):
-        super().__init__(data, **kwargs)
+    def __init__(self, simulator, **kwargs):
+        super().__init__(**kwargs)
         self.simulator:simulator_learn = simulator
 
     @torch.no_grad()
@@ -86,7 +86,7 @@ class AugDC(AlgBaseOffline):
         Q:torch.Tensor = self.critic.Q1(state, pi)
         lmbda = self.alpha / Q.abs().mean().detach()
         actor_loss = -lmbda * Q.mean()
-        return actor_loss, pi
+        return actor_loss, pi, lmbda
 
     def train(self, replay_buffer, batch_size=256):
         # return super().train(replay_buffer, batch_size)
@@ -119,7 +119,7 @@ class AugDC(AlgBaseOffline):
             grad_list.append(sampled_grad)
 
             self.actor_optimizer.zero_grad()
-            actor_loss, aug_pi = self.calc_actor_loss(AugTuple)
+            actor_loss, aug_pi, lmbda = self.calc_actor_loss(AugTuple)
             actor_loss.backward()
             aug_grad = get_network_grad(self.actor)
             grad_list.append(aug_grad)
@@ -153,10 +153,10 @@ class AugDC(AlgBaseOffline):
 
             tb_statics.update(
                 {
-                    "dc_loss": dc_loss.item(),
+                    "dc_loss_aug": dc_loss_aug.item(),
                     "actor_loss": actor_loss.item(),
                     "combined_loss": combined_loss.item(),
-                    "Q_value": torch.mean(Q).item(),
+                    # "Q_value": torch.mean(Q).item(),
                     "lmbda": lmbda,
                 }
             )

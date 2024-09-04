@@ -30,7 +30,7 @@ def get_config_off(algorithm="PRDC"):
     parser.add_argument(
         "--load_model", default="default"
     )  # Model load file name, "" doesn't load, "default" uses file_name
-    parser.add_argument("--device", default="cpu", type=str)  # Use gpu or cpu
+    parser.add_argument("--device", default="cuda", type=str)  # Use gpu or cpu
     parser.add_argument("--info", default="default")  # Additional information
     # TD3
     parser.add_argument("--actor_lr", default=3e-4, type=float)  # Actor learning rate

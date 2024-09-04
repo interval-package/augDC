@@ -5,8 +5,12 @@ import torch.nn.functional as F
 from algs.offline import AlgBaseOffline
 from simulator import simulator_learn
 
+"""
+Code for feasible zone for dataset constrain
+"""
+
 class FZDC(AlgBaseOffline):
-    def __init__(self, data, simulator, beta=2, k=1, **kwargs):
+    def __init__(self, data_s, simulator, beta=2, k=1, **kwargs):
         super().__init__(data, **kwargs)
         self.beta=beta
         self.k = k

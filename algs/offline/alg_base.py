@@ -12,7 +12,6 @@ from utils.np2t import Transition
 class AlgBaseOffline(AlgBase):
     def __init__(
         self,
-        data,
         state_dim,
         action_dim,
         max_action,

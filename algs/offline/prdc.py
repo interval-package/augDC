@@ -6,7 +6,7 @@ from algs.offline import AlgBaseOffline
 
 class PRDC(AlgBaseOffline):
     def __init__(self, data, beta=2, k=1, **kwargs):
-        super().__init__(data, **kwargs)
+        super().__init__(**kwargs)
         self.beta=beta
         self.k = k
         self.kd_tree = KDTree(data)

@@ -12,8 +12,8 @@ from utils.grad import get_network_grad
 _datatuple = Tuple[torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor,]
 
 class AugCDC(AlgBaseOffline):
-    def __init__(self, data, simulator, **kwargs):
-        super().__init__(data, **kwargs)
+    def __init__(self, simulator, **kwargs):
+        super().__init__(**kwargs)
         self.simulator:simulator_learn = simulator
 
     @torch.no_grad()

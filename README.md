@@ -62,6 +62,12 @@ pip install six
 
 because the d4rl do not register it due to sone error
 
+Rebuild error fixed by
+
+```bash
+conda install -c conda-forge gcc=12.1.0
+```
+
 ### gym errors
 
 The gym assert to be 0.21.0, so following command will replace the pip version

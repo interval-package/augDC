@@ -7,7 +7,7 @@ from utils.logger import add_scalars
 
 from torch.utils.tensorboard import SummaryWriter
 
-import simulator.model as models
+import world_model.model as models
 from simulator.simulator_learn import simulator_base, simulator_learn
 
 def save_model_config(model_config:dict, path_model_config, name, save=True):
@@ -25,7 +25,7 @@ def save_model_config(model_config:dict, path_model_config, name, save=True):
     return ret
 
 def train_model(env_id, env, obj_config, dict_config, model_type="MMLP", save_model=True, **kwargs):
-    device = torch.device("cpu")
+    device = torch.device(dict_config["device"])
 
     state_dim  = dict_config["state_dim"]
     action_dim = dict_config["action_dim"]

@@ -10,7 +10,7 @@ import tqdm
 from typing import Callable, Dict, Literal, Tuple, Union
 from abc import ABC, abstractmethod
 from utils.buffer import ReplayBuffer
-from simulator.model.model_base import model_base, mlp, CosineSimilarityLoss
+from world_model.model.model_base import model_base, mlp, CosineSimilarityLoss
 
 
 @dataclass

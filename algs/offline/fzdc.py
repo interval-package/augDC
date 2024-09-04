@@ -10,12 +10,12 @@ Code for feasible zone for dataset constrain
 """
 
 class FZDC(AlgBaseOffline):
-    def __init__(self, data_s, simulator, beta=2, k=1, **kwargs):
-        super().__init__(data, **kwargs)
+    def __init__(self, data_s, simulator_config, beta=2, k=1, **kwargs):
+        super().__init__(**kwargs)
         self.beta=beta
         self.k = k
-        self.kd_tree = KDTree(data)
-        self.simulator:simulator_learn = simulator
+        self.kd_tree = KDTree(data_s)
+        self.simulator = simulator_learn
         pass
 
     def train(self, replay_buffer, batch_size=256):

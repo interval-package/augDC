@@ -12,7 +12,7 @@ from utils.logger import add_scalars
 from torch.utils.tensorboard import SummaryWriter
 
 from simulator import simulator_learn
-from simulator.model import model_MLP
+from world_model.model import model_MLP
 from simulator.train import train_model, test_simulator
 
 """
@@ -32,7 +32,7 @@ def exp_test(model_type="MLP", sim: simulator_learn=None):
 
 if __name__ == "__main__":
 
-    model_type = "MMLP"
+    model_type = "MLP"
     _, _, sim = exp_train(model_type)
     # exp_test("MLP")
     simulator_learn

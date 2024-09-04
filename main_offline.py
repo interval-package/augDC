@@ -73,7 +73,7 @@ def main_offline_train(args, env, kwargs):
     for t in range(int(args.max_timesteps)):
         result = policy.train(replay_buffer, args.batch_size)
         for key, value in result.items():
-            writer.add_scalar(key, value, global_step=t)
+            writer.add_scalar("offline/"+key, value, global_step=t)
 
         # Evaluate episode
         if (t + 1) % args.eval_freq == 0:
@@ -96,9 +96,9 @@ def main_offline_train(args, env, kwargs):
                     policy, args.env_id, args.seed, mean, std
                 )
             for key, value in result.items():
-                writer.add_scalar(key, value, global_step=t)
+                writer.add_scalar("eval/"+key, value, global_step=t)
             logger.info("---------------------------------------")
-            logger.info(f"Time steps: {t + 1}, D4RL score: {result['d4rl_score']}, Epi len: {result['epi_len']}, Rew: {result['avg_reward']}")
+            logger.info(f"Time steps: {t + 1}, D4RL score: {result['d4rl_score']:.2f}, Epi len: {result['epi_len']}, Rew: {result['avg_reward']:.2f}")
 
     np.save(evaluation_path, evaluations)
     end_time = time.time()
@@ -106,6 +106,6 @@ def main_offline_train(args, env, kwargs):
 
 
 if __name__ == "__main__":
-    args, env, kwargs = get_config_off()
+    args, env, kwargs = get_config_off("PRWIC")
     main_offline_train(args, env, kwargs)
     pass

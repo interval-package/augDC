@@ -7,6 +7,7 @@ from net.actor import Actor
 from net.critic import DuelCritic
 from typing import Tuple, Union, Literal
 from algs import AlgBase
+from utils.np2t import Transition
 
 class AlgBaseOffline(AlgBase):
     def __init__(
@@ -35,6 +36,7 @@ class AlgBaseOffline(AlgBase):
         self.critic = DuelCritic(state_dim, action_dim).to(self.device)
         self.critic_target = copy.deepcopy(self.critic)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
+        self.state_dim =state_dim
         self.action_dim = action_dim
         self.max_action = max_action
         self.discount = discount
@@ -63,9 +65,7 @@ class AlgBaseOffline(AlgBase):
         print("state_dim:", state_dim, ", action_dim: ", action_dim)
 
     def _calc_loss_critic(self, 
-                      trans_t:Tuple[torch.Tensor, torch.Tensor, 
-                                    torch.Tensor, torch.Tensor, 
-                                    torch.Tensor]):
+                      trans_t:Transition):
         state, action, reward, next_state, not_done = trans_t
         with torch.no_grad():
             # Select action according to policy and add clipped noise
@@ -92,7 +92,7 @@ class AlgBaseOffline(AlgBase):
         # tb_statics.update({"critic_loss": critic_loss.item()})
 
         return critic_loss
-
+    
     def _update_target(self):
         """
         This method used to update the target networks.

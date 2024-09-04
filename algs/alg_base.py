@@ -17,4 +17,20 @@ class AlgBase():
         state_dict = torch.load(model_path, weights_only=True)
         for model_name, model in self.models.items():
             model.load_state_dict(state_dict[model_name])
+
+    def close_critic_grad(self):
+        for p in self.critic.parameters():
+            p.requires_grad = False
+
+    def close_actor_grad(self):
+        for p in self.actor.parameters():
+            p.requires_grad = False
+
+    def open_critic_grad(self):
+        for p in self.critic.parameters():
+            p.requires_grad = True
+
+    def open_actor_grad(self):
+        for p in self.actor.parameters():
+            p.requires_grad = True
     pass

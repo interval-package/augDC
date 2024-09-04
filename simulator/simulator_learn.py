@@ -10,37 +10,20 @@ import tqdm
 from typing import Literal, Union
 from simulator.simulator_base import simulator_base
 import simulator.model as models
+import time
 
 path_script = os.path.abspath(__file__)
 
 path_folder = os.path.dirname(path_script)
 
-path_simulator_buffer = os.path.join(path_folder, "simulator_buffer")
+path_simulator_buffer = os.path.join(path_folder, "..", "result", "world_models")
 
 def get_simulator_folder(env_id, model_type, ftime:str=None):
     folder_name = f"simulator_{env_id}_{model_type}"
-    if ftime is not None:
-        folder_name = folder_name + f"_{ftime}"
-    ret = os.path.join(path_simulator_buffer, folder_name)
+    ftime = ftime if ftime is not None else time.strftime("%m-%d-%H:%M:%S")
+    ret = os.path.join(path_simulator_buffer, folder_name, ftime)
     if not os.path.exists(ret):
         os.makedirs(ret)
-    return ret
-
-def get_model_folder(env_id, model_type, ftime:str=None):
-    folder_name = f"simulator_{env_id}_{model_type}"
-    if ftime is not None:
-        folder_name = folder_name + f"_{ftime}"
-    ret = os.path.join(path_simulator_buffer, folder_name, "saved_mdls")
-    if not os.path.exists(ret):
-        os.makedirs(ret)
-    return ret
-
-def get_model_path(env_id, model_type, iter:int=None, ftype="pkl"):
-    folder_name = get_model_folder(env_id, model_type)
-    if iter is None:
-        ret = os.path.join(folder_name, f"model.{ftype}")
-    else:
-        ret = os.path.join(folder_name, f"model_{iter}.{ftype}")
     return ret
 
 def calc_cosine_similarity(vector1, vector2):
@@ -57,7 +40,7 @@ def calc_cosine_similarity(vector1, vector2):
 
 class simulator_learn(simulator_base):
 
-    def __init__(self, env_id, env:gym.Env, model_type:Literal["MLP", "GAN", "VAE"], model_config=None, **kwargs):
+    def __init__(self, env_id, env:gym.Env, model_type:Literal["MLP", "GAN", "VAE"], model_config=None, path=None, **kwargs):
         """
         Using the env id to specifize the target simulator.
         Check the buffer contains the simulator or not. If contains load the simulator, else train with d4rl data and save. 
@@ -65,12 +48,17 @@ class simulator_learn(simulator_base):
         super().__init__(env_id, env)
         self.model_type = model_type
         self.model_config = model_config
-        self.path_model = get_model_path(self.env_id, self.model_type)
 
         self.env_model:models.model_base = None
         # self.load_model(env_id, model_type)
-
+        self.path = path
         self.shapes = None
+
+    def make_path(self):
+        self.path = self.path if self.path is not None else get_simulator_folder(self.env_id, self.model_type)
+        self.path_model = os.path.join(self.path, "models")
+        if not os.path.exists(self.path_model):
+            os.makedirs(self.path_model)
 
     @classmethod
     def from_model(cls, model, env, model_config:dict):
@@ -172,10 +160,6 @@ class simulator_learn(simulator_base):
         return ret
 
     def save(self, iter=None):
-        with open(self.path_model, "wb") as f:
+        path_model = os.path.join(self.path_model, f"model_{iter if iter is not None else 'latest'}.pkl")
+        with open(path_model, "wb") as f:
             pickle.dump(self.env_model, f)
-
-        if iter is not None:
-            path_model = get_model_path(self.env_id, self.model_type, iter=iter)
-            with open(path_model, "wb") as f:
-                pickle.dump(self.env_model, f)

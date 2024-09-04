@@ -21,11 +21,11 @@ This script is used to train and test a simulator.
 
 def exp_train(model_type="MLP"):
     args, env, kwargs = get_config_off("PRDC")
-    train_model(args.env_id, env, args, kwargs, model_type=model_type)
+    mdl, config, sim = train_model(args.env_id, env, args, kwargs, model_type=model_type)
+    return mdl, config, sim
 
-def exp_test(model_type="MLP"):
+def exp_test(model_type="MLP", sim: simulator_learn=None):
     args, env, kwargs = get_config_off("PRDC")
-    sim = simulator_learn(env_id=args.env_id, env=env, model_type=model_type)
     sim.load_model(model_type)
     test_simulator(env, sim)
 
@@ -33,8 +33,9 @@ def exp_test(model_type="MLP"):
 if __name__ == "__main__":
 
     model_type = "MMLP"
-    exp_train(model_type)
+    _, _, sim = exp_train(model_type)
     # exp_test("MLP")
-    exp_test(model_type)
+    simulator_learn
+    exp_test(model_type, sim=sim)
 
     pass

@@ -29,11 +29,11 @@ datasets = \
 
 scripts = [
     "main_offline.py",
-    "main_online.py",
+    # "main_online.py",
 ]
 
 policies = [
-    "PRDC",
+    # "PRDC",
     "PRWIC"
 ]
 

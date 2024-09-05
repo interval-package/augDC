@@ -44,19 +44,23 @@ path_folder = os.path.dirname(path_script)
 path_tasks = os.path.join(path_folder, "tasks.json")
 path_config = os.path.join(path_folder, "configs")
 
-def generate_task_config(policy, env)->dict:
+def generate_task_config(policy, env_id, **kwargs)->dict:
     ret = {
         "policy": policy,
-        "env_id": env
+        "env_id": env_id,
     }
+    ret.update(kwargs)
     return ret
 
 if __name__ == "__main__":
     tasks = []
+    general_config = {
+        "device": "cpu"
+    }
     for script in scripts:
         for policy in policies:
             for env_id in datasets:
-                config = generate_task_config(policy, env_id)
+                config = generate_task_config(policy, env_id, **general_config)
                 tasks.append(
                     {
                         "script": script,

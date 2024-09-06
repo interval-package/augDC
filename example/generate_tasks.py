@@ -1,3 +1,4 @@
+import argparse
 import os, json
 
 datasets = \
@@ -54,9 +55,17 @@ def generate_task_config(policy, env_id, **kwargs)->dict:
 
 if __name__ == "__main__":
     tasks = []
-    general_config = {
-        "device": "cpu"
-    }
+    parser = argparse.ArgumentParser()
+    # Experiment
+    parser.add_argument("--device", default="cpu")
+    parser.add_argument("--seed", default=None)
+    args = parser.parse_args()
+    args = vars(args)
+    general_config = {}
+    for key, val in args.items():
+        if val is not None:
+            general_config[key] = val
+
     for script in scripts:
         for policy in policies:
             for env_id in datasets:

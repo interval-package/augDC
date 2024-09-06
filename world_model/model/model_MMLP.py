@@ -19,9 +19,10 @@ class MdlOptPair:
     loss_f: nn.modules.loss._Loss
     optimizer: torch.optim.Optimizer = None
 
-class model_MMLP(nn.Module, model_base):
+class model_MMLP(model_base):
     """
-    MultiMLP simulator. Seperately train the MLP to predict the next state, reward and is_done
+    MultiMLP simulator. Seperately train the MLP to predict the next state, reward and is_done.
+    # TODO normalization not specified.
     """
 
     def __init__(self, device, mlp_shape, lr=0.01, batch_size=256, **kwargs) -> None:

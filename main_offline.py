@@ -115,6 +115,6 @@ def main_offline_train(args, env, kwargs):
 
 
 if __name__ == "__main__":
-    args, env, kwargs = get_config_off("PRWIC")
+    args, env, kwargs = get_config_off("PRDC")
     main_offline_train(args, env, kwargs)
     pass

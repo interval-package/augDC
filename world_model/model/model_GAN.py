@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from utils.buffer import ReplayBuffer
 from world_model.model.model_base import model_base, mlp, CosineSimilarityLoss
 
-class model_GAN(nn.Module, model_base):
+class model_GAN(model_base):
     def __init__(self) -> None:
         super.__init__()
 

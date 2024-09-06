@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from utils.buffer import ReplayBuffer
 from world_model.model.model_base import model_base, mlp, CosineSimilarityLoss
 
-class model_MLP(nn.Module, model_base):
+class model_MLP(model_base):
     """
     A network to simulate the env model.
     """

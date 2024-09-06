@@ -11,7 +11,7 @@ from typing import Callable, Dict, Literal, Tuple, Union
 from abc import ABC, abstractmethod
 from utils.buffer import ReplayBuffer
 
-class model_base(ABC):
+class model_base(nn.Module, ABC):
 
     @abstractmethod
     def train(self):

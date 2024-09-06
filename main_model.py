@@ -35,7 +35,7 @@ if __name__ == "__main__":
     model_type = "MLP"
     _, _, sim = exp_train(model_type)
     # exp_test("MLP")
-    simulator_learn
+    # simulator_learn
     exp_test(model_type, sim=sim)
 
     pass

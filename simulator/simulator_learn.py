@@ -13,7 +13,8 @@ import world_model.model as models
 import time
 
 """
-The simulator_learn is used to warp models to simulator
+The simulator_learn is used to warp models to simulator.
+Caution, model load still have some error.
 """
 
 path_script = os.path.abspath(__file__)
@@ -82,8 +83,11 @@ class simulator_learn(simulator_base):
         if os.path.exists(self.path_model):
             print(f"Load model from {self.path_model}.")
             with open(self.path_model, "rb") as f:
-                ret = pickle.load(f)
-            self.env_model = ret
+                ret = torch.load(f)
+            if isinstance(ret, nn.module):
+                self.set_model(ret)
+            elif isinstance(ret, dict):
+                self.set_state_dict(ret)
         else:
             print(f"Model not exists at {self.path_model}")
             raise NotImplementedError("Do not allow empty load yet.")
@@ -97,6 +101,10 @@ class simulator_learn(simulator_base):
         self.env_model = model
         return model
 
+    def set_state_dict(self, state_dict):
+        self.env_model.load_state_dict(state_dict)
+        return self.env_model
+    
     def test_simulator(self, eval_round=256, info=None, pbar=False, max_step=100,**kwargs):
         """
         This function is used to test the difference between the simulator and real env.
@@ -182,4 +190,4 @@ class simulator_learn(simulator_base):
     def save(self, iter=None):
         path_model = os.path.join(self.path_model, f"model_{iter if iter is not None else 'latest'}.pkl")
         with open(path_model, "wb") as f:
-            pickle.dump(self.env_model, f)
+            torch.save(self.env_model.state_dict(), f)

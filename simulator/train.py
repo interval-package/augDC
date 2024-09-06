@@ -24,14 +24,14 @@ def save_model_config(model_config:dict, path_model_config, name, save=True):
             json.dump(ret, f)
     return ret
 
-def train_model(env_id, env, obj_config, dict_config, model_type="MMLP", save_model=True, **kwargs):
+def train_model(env_id, env, args, dict_config, model_type="MMLP", save_model=True, **kwargs):
     device = torch.device(dict_config["device"])
 
     state_dim  = dict_config["state_dim"]
     action_dim = dict_config["action_dim"]
     # max_action = kwargs["max_action"]
 
-    sim = simulator_learn(env_id=obj_config.env_id, env=env, model_type=model_type)
+    sim = simulator_learn(env_id=args.env_id, env=env, model_type=model_type)
     sim.make_path()
     writer = SummaryWriter(log_dir=sim.path, flush_secs=120)
 
@@ -62,12 +62,16 @@ def train_model(env_id, env, obj_config, dict_config, model_type="MMLP", save_mo
     }
 
     save_model_config(model_config, sim.path, "model.json")
-    save_model_config(vars(obj_config), sim.path, "env.json")
+    save_model_config(vars(args), sim.path, "env.json")
 
     model:models.model_base = getattr(models, f"model_{model_type}")(device, **model_config)
 
-    replay_buffer = ReplayBuffer(dict_config["state_dim"], dict_config["action_dim"], device, env_id, obj_config.scale, obj_config.shift)
+    replay_buffer = ReplayBuffer(dict_config["state_dim"], dict_config["action_dim"], device, env_id, args.scale, args.shift)
     replay_buffer.from_d4rlenv(env)
+    if args.normalize:
+        mean, std = replay_buffer.normalize_states()
+    else:
+        mean, std = 0, 1
 
     model.train(replay_buffer, **model_config)
     # model.save(path_model)

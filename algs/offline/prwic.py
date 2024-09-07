@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import copy
 from scipy.spatial import KDTree
 import torch
@@ -6,7 +7,7 @@ from algs.offline import AlgBaseOffline
 from utils.np2t import Transition
 from net.guard import DuelGuard
 
-class PRWIC(AlgBaseOffline):
+class PRWIC(AlgBaseOffline, ABC):
     def __init__(self, 
                  data, 
                  beta=2, 
@@ -27,6 +28,7 @@ class PRWIC(AlgBaseOffline):
         self.guard_optimizer = torch.optim.Adam(self.guard.parameters(), lr=guard_lr)
         pass
 
+    @abstractmethod
     def _calc_target_c(self, p2d, target_C, not_done):
         ...
 
@@ -150,4 +152,4 @@ class PRWIC_max(PRWIC):
 
 class PRWIC_sum(PRWIC):
     def _calc_target_c(self, p2d, target_C, not_done):
-        target_C = p2d + not_done * self.discount_p2d * target_C
+        return p2d + not_done * self.gamma_c * target_C

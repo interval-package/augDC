@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import copy
+from typing import Tuple
 from scipy.spatial import KDTree
 import torch
 import torch.nn.functional as F
@@ -15,6 +16,7 @@ class PRWIC(AlgBaseOffline, ABC):
                  guard_lr=0.01,
                  gamma_c=0.01,
                  balance_factor=0.1,
+                 epison=0,
                  **kwargs):
         super().__init__(**kwargs)
         self.data=data
@@ -23,6 +25,7 @@ class PRWIC(AlgBaseOffline, ABC):
         self.kd_tree = KDTree(data)
         self.balance_factor = balance_factor
         self.gamma_c = gamma_c
+        self.epison = epison
         self.guard = DuelGuard(self.state_dim, self.action_dim).to(self.device)
         self.guard_target = copy.deepcopy(self.guard).to(self.device)
         self.guard_optimizer = torch.optim.Adam(self.guard.parameters(), lr=guard_lr)
@@ -32,7 +35,7 @@ class PRWIC(AlgBaseOffline, ABC):
     def _calc_target_c(self, p2d, target_C, not_done):
         ...
 
-    def _calc_loss_guard(self, trans_t:Transition):
+    def _calc_loss_guard(self, trans_t:Transition)->Tuple[torch.Tensor, dict]:
         # Here we do not using the world model inference but by using the one step (s, a) dataset constrain to measure the constrain signal.
         state, action, reward, next_state, not_done = trans_t
         with torch.no_grad():
@@ -54,13 +57,15 @@ class PRWIC(AlgBaseOffline, ABC):
                 .squeeze(dim=1)
                 .to(self.device)
             )
-            p2d = torch.clamp(F.mse_loss(pi, nearest_neightbour) - 0.1, min=0, max=1)
+
+            # Change the constrain signal
+            p2d = torch.clamp(F.mse_loss(pi, nearest_neightbour) - self.epison, min=0, max=10)
 
             # Compute the target C value
             target_C1, target_C2 = self.guard_target(next_state, next_action)
             target_C = torch.min(target_C1, target_C2)
             # target_C = p2d + not_done * self.discount * target_C
-            target_C = self._calc_target_c(p2d,target_C,not_done)
+            target_C = self._calc_target_c(p2d, target_C, not_done)
 
         current_C1, current_C2 = self.guard(state, action)
 
@@ -68,7 +73,12 @@ class PRWIC(AlgBaseOffline, ABC):
         guard_loss = F.mse_loss(current_C1, target_C) + F.mse_loss(
             current_C2, target_C
         )
-        return guard_loss, nearest_neightbour
+
+        info = {
+            "nearest_neightbour": nearest_neightbour, 
+        }
+
+        return guard_loss, info
 
     def train(self, replay_buffer, batch_size=256):
         self.total_it += 1
@@ -87,7 +97,8 @@ class PRWIC(AlgBaseOffline, ABC):
         self.critic_optimizer.step()
 
         # Compute guard loss
-        guard_loss, nearest_neightbour = self._calc_loss_guard((state, action, reward, next_state, not_done))
+        guard_loss, info = self._calc_loss_guard((state, action, reward, next_state, not_done))
+        nearest_neightbour = info.pop("nearest_neightbour")
         tb_statics.update({"guard_loss": guard_loss.item()})
 
         # Optimize the guard
@@ -101,15 +112,16 @@ class PRWIC(AlgBaseOffline, ABC):
             # Compute actor loss
             pi = self.actor(state)
             Q = self.critic.Q1(state, pi)
-            lmbda = self.alpha / Q.abs().mean().detach()
-            actor_loss = -lmbda * Q.mean()
+            lmbda_Q = self.alpha / Q.abs().mean().detach()
+            actor_loss = -lmbda_Q * Q.mean()
 
             dc_loss = F.mse_loss(pi, nearest_neightbour)
 
             # Trick Q like c loss calc
             C = self.guard.Q1(state, pi)
-            lmbda_C = self.alpha / C.abs().mean().detach()
-            cons_loss = lmbda_C + C.mean() 
+            # lmbda_C = self.alpha / C.abs().mean().detach()
+            # cons_loss = lmbda_C + C.mean() 
+            cons_loss = C.mean()
 
             # Optimize the actor
             combined_loss = actor_loss + cons_loss * self.balance_factor + dc_loss * (1-self.balance_factor)
@@ -125,7 +137,7 @@ class PRWIC(AlgBaseOffline, ABC):
                     "combined_loss": combined_loss.item(),
                     "Q_value": torch.mean(Q).item(),
                     "C_value": torch.mean(C).item(),
-                    "lmbda": lmbda,
+                    "lmbda": lmbda_Q,
                 }
             )
 
@@ -148,7 +160,7 @@ class PRWIC(AlgBaseOffline, ABC):
 
 class PRWIC_max(PRWIC):
     def _calc_target_c(self, p2d, target_C, not_done):
-        return torch.max(p2d , target_C)*self.gamma_c + p2d*(1-self.gamma_c)
+        return torch.max(p2d , target_C * not_done) * self.gamma_c + p2d * (1-self.gamma_c)
 
 class PRWIC_sum(PRWIC):
     def _calc_target_c(self, p2d, target_C, not_done):

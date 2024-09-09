@@ -30,7 +30,7 @@ def get_config_off(algorithm="PRDC", config={}):
         "--max_timesteps", default=1e6, type=int
     )  # Max time steps to run environment
     parser.add_argument(
-        "--save_model", default=True, action="store_true"
+        "--save_model", default=False, action="store_false"
     )  # Save model and optimizer parameters
     parser.add_argument(
         "--load_model", default="default"

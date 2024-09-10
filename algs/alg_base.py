@@ -4,7 +4,7 @@ import gym
 class AlgBase():
 
     @property
-    def alg_params(self):
+    def alg_params(self)->dict:
         return {}
 
     @torch.no_grad()

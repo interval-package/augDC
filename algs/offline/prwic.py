@@ -39,7 +39,8 @@ class PRWIC(AlgBaseOffline, ABC):
             "gamma_c": self.gamma_c,
             "epsilon": self.epsilon,
         }
-        return ret.update(temp)
+        ret.update(temp)
+        return ret
 
     @abstractmethod
     def _calc_target_c(self, p2d, target_C, not_done):

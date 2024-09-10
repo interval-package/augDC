@@ -64,7 +64,7 @@ class AlgBaseOffline(AlgBase):
         print("state_dim:", state_dim, ", action_dim: ", action_dim)
 
     @property
-    def alg_params(self):
+    def alg_params(self)->dict:
         temp = super().alg_params
         ret = {
             "type": "offline",
@@ -78,7 +78,8 @@ class AlgBaseOffline(AlgBase):
             "policy_freq": self.policy_freq,
             "alpha": self.alpha,
         }
-        return temp.update(ret)
+        temp.update(ret)
+        return temp
 
     def _calc_loss_critic(self, 
                       trans_t:Transition):

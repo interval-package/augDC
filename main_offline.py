@@ -39,9 +39,6 @@ def main_offline_train(args, env, kwargs):
         f"Policy: {args.policy}, Env: {args.env_id}, Seed: {args.seed}, Info: {args.info}"
     )
 
-    # save configs
-    save_config(args, os.path.join(dir_result, "config.txt"))
-
     # load model
     if args.load_model != "default":
         model_name = args.load_model
@@ -73,6 +70,12 @@ def main_offline_train(args, env, kwargs):
     performed_args.update(kwargs)
 
     policy:algs.offline.AlgBaseOffline = getattr(algs.offline, args.policy)(**performed_args)
+
+    cur_args:dict = args.__dict__
+    cur_args.update(policy.alg_params)
+    
+    # save configs
+    save_config(cur_args, os.path.join(dir_result, "config.txt"))
 
     evaluations = []
     evaluation_path = os.path.join(dir_result, file_name + ".npy")

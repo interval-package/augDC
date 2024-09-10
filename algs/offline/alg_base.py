@@ -63,6 +63,23 @@ class AlgBaseOffline(AlgBase):
 
         print("state_dim:", state_dim, ", action_dim: ", action_dim)
 
+    @property
+    def alg_params(self):
+        temp = super().alg_params
+        ret = {
+            "type": "offline",
+            "state_dim": self.state_dim,
+            "action_dim": self.action_dim,
+            "max_action": self.max_action,
+            "discount": self.discount,
+            "tau": self.tau,
+            "policy_noise": self.policy_noise,
+            "noise_clip": self.noise_clip,
+            "policy_freq": self.policy_freq,
+            "alpha": self.alpha,
+        }
+        return temp.update(ret)
+
     def _calc_loss_critic(self, 
                       trans_t:Transition):
         state, action, reward, next_state, not_done = trans_t

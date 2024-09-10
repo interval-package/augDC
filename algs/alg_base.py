@@ -2,6 +2,11 @@ import torch
 import gym
 
 class AlgBase():
+
+    @property
+    def alg_params(self):
+        return {}
+
     @torch.no_grad()
     def select_action(self, state):
         state = torch.FloatTensor(state.reshape(1, -1)).to(self.device)

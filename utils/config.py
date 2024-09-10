@@ -214,7 +214,8 @@ def get_config_on(algorithm="TD3", config={}):
 
 
 def save_config(args, arg_path):
-    argsDict = args.__dict__
+    argsDict = args.__dict__ if hasattr(args, __dict__) else args
+    assert isinstance(argsDict, dict), "Type error."
     with open(arg_path, "w") as f:
         for key, value in argsDict.items():
             f.write(key + " : " + str(value) + "\n")

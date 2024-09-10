@@ -14,9 +14,9 @@ class PRWIC(AlgBaseOffline, ABC):
                  beta=2, 
                  k=1, 
                  guard_lr=0.01,
-                 gamma_c=0.01,
-                 balance_factor=0.1,
-                 epison=0,
+                 gamma_c=0.,
+                 balance_factor=0.01,
+                 epsilon=0,
                  **kwargs):
         super().__init__(**kwargs)
         self.data=data
@@ -25,11 +25,21 @@ class PRWIC(AlgBaseOffline, ABC):
         self.kd_tree = KDTree(data)
         self.balance_factor = balance_factor
         self.gamma_c = gamma_c
-        self.epison = epison
+        self.epsilon = epsilon
         self.guard = DuelGuard(self.state_dim, self.action_dim).to(self.device)
         self.guard_target = copy.deepcopy(self.guard).to(self.device)
         self.guard_optimizer = torch.optim.Adam(self.guard.parameters(), lr=guard_lr)
         pass
+
+    @property
+    def alg_params(self):
+        ret = super().alg_params
+        temp = {
+            "balance_factor": self.balance_factor,
+            "gamma_c": self.gamma_c,
+            "epsilon": self.epsilon,
+        }
+        return ret.update(temp)
 
     @abstractmethod
     def _calc_target_c(self, p2d, target_C, not_done):
@@ -59,7 +69,7 @@ class PRWIC(AlgBaseOffline, ABC):
             )
 
             # Change the constrain signal
-            p2d = torch.clamp(F.mse_loss(pi, nearest_neightbour) - self.epison, min=0, max=10)
+            p2d = torch.clamp(F.mse_loss(pi, nearest_neightbour) - self.epsilon, min=0, max=10)
 
             # Compute the target C value
             target_C1, target_C2 = self.guard_target(next_state, next_action)

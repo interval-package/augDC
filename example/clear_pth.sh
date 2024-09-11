@@ -1,0 +1,1 @@
+find /root/code/augDC/result/offline -name "*.pth" -delete

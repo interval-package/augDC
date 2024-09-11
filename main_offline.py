@@ -63,7 +63,8 @@ def main_offline_train(args, env, kwargs):
 
     more_args = {
         "data": datasa,
-        "data_s": datas
+        "data_s": datas,
+        "max_timesteps": args.max_timesteps
     }
 
     performed_args = more_args
@@ -83,7 +84,7 @@ def main_offline_train(args, env, kwargs):
         policy.load(model_path)
 
     for t in range(int(args.max_timesteps)):
-        result = policy.train(replay_buffer, args.batch_size)
+        result = policy.train(replay_buffer, args.batch_size, config=cur_args)
         for key, value in result.items():
             writer.add_scalar("offline/"+key, value, global_step=t)
 

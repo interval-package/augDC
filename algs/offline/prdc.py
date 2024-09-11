@@ -13,7 +13,7 @@ class PRDC(AlgBaseOffline):
         self.kd_tree = KDTree(data)
         pass
 
-    def train(self, replay_buffer, batch_size=256):
+    def train(self, replay_buffer, batch_size=256, **kwargs):
         self.total_it += 1
         tb_statics = dict()
 

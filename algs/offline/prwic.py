@@ -15,17 +15,22 @@ class PRWIC(AlgBaseOffline, ABC):
                  k=1, 
                  guard_lr=0.01,
                  gamma_c=0.,
-                 balance_factor=0.01,
+                 guard_factor=0.01,
                  epsilon=0,
+                 max_timesteps=10000,
+                 warm_factor_guard=0.5,
                  **kwargs):
         super().__init__(**kwargs)
         self.data=data
         self.beta=beta
         self.k = k
         self.kd_tree = KDTree(data)
-        self.balance_factor = balance_factor
+        self.guard_factor = guard_factor
         self.gamma_c = gamma_c
         self.epsilon = epsilon
+        self.max_timesteps = max_timesteps
+        self.warm_up_step = int(warm_factor_guard * max_timesteps)
+
         self.guard = DuelGuard(self.state_dim, self.action_dim).to(self.device)
         self.guard_target = copy.deepcopy(self.guard).to(self.device)
         self.guard_optimizer = torch.optim.Adam(self.guard.parameters(), lr=guard_lr)
@@ -35,7 +40,7 @@ class PRWIC(AlgBaseOffline, ABC):
     def alg_params(self):
         ret = super().alg_params
         temp = {
-            "balance_factor": self.balance_factor,
+            "balance_factor": self.guard_factor,
             "gamma_c": self.gamma_c,
             "epsilon": self.epsilon,
         }
@@ -91,7 +96,7 @@ class PRWIC(AlgBaseOffline, ABC):
 
         return guard_loss, info
 
-    def train(self, replay_buffer, batch_size=256):
+    def train(self, replay_buffer, batch_size=256, **kwargs):
         self.total_it += 1
         tb_statics = dict()
 
@@ -128,14 +133,20 @@ class PRWIC(AlgBaseOffline, ABC):
 
             dc_loss = F.mse_loss(pi, nearest_neightbour)
 
-            # Trick Q like c loss calc
-            C = self.guard.Q1(state, pi)
-            # lmbda_C = self.alpha / C.abs().mean().detach()
-            # cons_loss = lmbda_C + C.mean() 
-            cons_loss = C.mean()
+
+            if self.total_it > self.warm_up_step:
+                # Trick Q like c loss calc
+                C = self.guard.Q1(state, pi)
+                # lmbda_C = self.alpha / C.abs().mean().detach()
+                # cons_loss = lmbda_C + C.mean() 
+                cons_loss = C.mean()
+                guard_factor = self.guard_factor
+            else:
+                cons_loss = 0
+                guard_factor = 0
 
             # Optimize the actor
-            combined_loss = actor_loss + cons_loss * self.balance_factor + dc_loss * (1-self.balance_factor)
+            combined_loss = actor_loss + cons_loss * self.guard_factor + dc_loss * (1-self.guard_factor)
             self.actor_optimizer.zero_grad()
             combined_loss.backward()
             self.actor_optimizer.step()

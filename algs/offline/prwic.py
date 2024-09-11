@@ -142,7 +142,7 @@ class PRWIC(AlgBaseOffline, ABC):
                 cons_loss = C.mean()
                 guard_factor = self.guard_factor
             else:
-                cons_loss = 0
+                cons_loss = torch.tensor(0)
                 guard_factor = 0
 
             # Optimize the actor

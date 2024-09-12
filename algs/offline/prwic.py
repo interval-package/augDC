@@ -14,11 +14,11 @@ class PRWIC(AlgBaseOffline, ABC):
                  beta=2, 
                  k=1, 
                  guard_lr=0.01,
-                 gamma_c=0.,
-                 guard_factor=1e-16,
+                 gamma_c=1e-4,
+                 guard_factor=1e-4,
                  epsilon=0,
                  max_timesteps=10000,
-                 warm_factor_guard=0.5,
+                 warm_factor_guard=0.3,
                  **kwargs):
         super().__init__(**kwargs)
         self.data=data
@@ -60,7 +60,8 @@ class PRWIC(AlgBaseOffline, ABC):
                 -self.noise_clip, self.noise_clip
             )
 
-            pi = self.actor(next_state)
+            # pi_next = self.actor(next_state)
+            pi = self.actor(state)
             next_action = (self.actor_target(next_state) + noise).clamp(
                 -self.max_action, self.max_action
             )
@@ -91,6 +92,7 @@ class PRWIC(AlgBaseOffline, ABC):
         )
 
         info = {
+            "pi": pi,
             "nearest_neightbour": nearest_neightbour, 
         }
 
@@ -125,7 +127,7 @@ class PRWIC(AlgBaseOffline, ABC):
         # Delayed policy updates
         if self.total_it % self.policy_freq == 0:
 
-            # Compute actor loss
+            # Compute actor loss, actually making it a BC
             pi = self.actor(state)
             Q = self.critic.Q1(state, pi)
             lmbda_Q = self.alpha / Q.abs().mean().detach()
@@ -133,9 +135,8 @@ class PRWIC(AlgBaseOffline, ABC):
 
             dc_loss = F.mse_loss(pi, nearest_neightbour)
 
-
             if self.total_it > self.warm_up_step:
-                # Trick Q like c loss calc
+                # Trick Q like c loss calc, here different from above, treat like a true comp
                 C = self.guard.Q1(state, pi)
                 # lmbda_C = self.alpha / C.abs().mean().detach()
                 # cons_loss = lmbda_C + C.mean() 
@@ -146,7 +147,7 @@ class PRWIC(AlgBaseOffline, ABC):
                 guard_factor = 0
 
             # Optimize the actor
-            combined_loss = actor_loss + cons_loss * self.guard_factor + dc_loss * (1-self.guard_factor)
+            combined_loss = actor_loss + cons_loss * guard_factor + dc_loss * (1-guard_factor)
             self.actor_optimizer.zero_grad()
             combined_loss.backward()
             self.actor_optimizer.step()

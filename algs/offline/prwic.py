@@ -15,7 +15,7 @@ class PRWIC(AlgBaseOffline, ABC):
                  k=1, 
                  guard_lr=0.01,
                  gamma_c=0.,
-                 guard_factor=0.01,
+                 guard_factor=1e-16,
                  epsilon=0,
                  max_timesteps=10000,
                  warm_factor_guard=0.5,
@@ -75,11 +75,11 @@ class PRWIC(AlgBaseOffline, ABC):
             )
 
             # Change the constrain signal
-            p2d = torch.clamp(F.mse_loss(pi, nearest_neightbour) - self.epsilon, min=0, max=10)
+            p2d = torch.clamp(F.mse_loss(pi, nearest_neightbour) - self.epsilon, min=0, max=0.5)
 
             # Compute the target C value
             target_C1, target_C2 = self.guard_target(next_state, next_action)
-            target_C = torch.min(target_C1, target_C2)
+            target_C = torch.max(target_C1, target_C2)
             # target_C = p2d + not_done * self.discount * target_C
             target_C = self._calc_target_c(p2d, target_C, not_done)
 
@@ -155,6 +155,7 @@ class PRWIC(AlgBaseOffline, ABC):
                 {
                     "dc_loss": dc_loss.item(),
                     "cons_loss": cons_loss.item(),
+                    "dc_cons_gap": dc_loss.item() - cons_loss.item(),
                     "actor_loss": actor_loss.item(),
                     "combined_loss": combined_loss.item(),
                     "Q_value": torch.mean(Q).item(),

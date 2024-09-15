@@ -1,204 +1,221 @@
 import os
 import matplotlib.pyplot as plt
-import math
+import math, pickle
 from dataclasses import dataclass
-from typing import Union, Dict
+from typing import List, Tuple, Union, Dict
+import scipy
+import scipy.signal
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+import seaborn as sns
+
+"""
+result:
+    offline
+        envs
+            algs
+                time
+"""
+
 path_script = os.path.abspath(__file__)
-
 path_folder = os.path.dirname(path_script)
-
-path_folder = "/home/zhangfeihong/code/zza/yolov5/runs/train/coco"
-
-path_pic = os.path.join(path_folder, "pics")
+path_ws = os.path.join(path_folder, "..")
+path_pic = os.path.join(path_ws, "pics")
 if not os.path.exists(path=path_pic):
     os.mkdir(path_pic)
+path_result = os.path.join(path_ws, "result")
+path_offline = os.path.join(path_result, "offline")
 
-child_folders = [name for name in os.listdir(path_folder) if os.path.isdir(os.path.join(path_folder, name))]
 
-tags_train = ['train/box_loss', 'train/obj_loss', 'train/cls_loss']
-tags_val = ['val/box_loss', 'val/obj_loss', 'val/cls_loss']
-tags_metric = ['metrics/precision', 'metrics/recall', 'metrics/mAP_0.5', 'metrics/mAP_0.5:0.95']
-tags_lr = ['x/lr0', 'x/lr1', 'x/lr2']
+offline_tags = \
+[
+    'offline/critic_loss', 
+    'offline/guard_loss', 
+    'offline/dc_loss', 
+    # 'offline/cons_loss', 
+    # 'offline/dc_cons_gap', 
+    'offline/actor_loss', 
+    # 'offline/combined_loss', 
+    'offline/Q_value', 
+    'offline/C_value', 
+    # 'offline/lmbda', 
+]
 
-tags_dict = {
-    "tags_TrainLoss": tags_train, 
-    "tags_ValLoss": tags_val, 
-    "tags_metric": tags_metric, 
-    "tags_lr": tags_lr
-    }
+eval_tags = \
+[
+    'eval/avg_reward', 
+    'eval/d4rl_score', 
+    'eval/epi_len'
+]
 
-def extract_data_tag(log_dir, tag):
-    event_acc = EventAccumulator(log_dir)
-    event_acc.Reload()
-    print(event_acc.Tags()['scalars'])
-    if tag not in event_acc.Tags()['scalars']:
-        raise ValueError(f"Tag {tag} not found in TensorBoard logs.")
+def simple_filter(tag):
+    tags = offline_tags + eval_tags
+    return tag in tags
 
+def get_child_dirs(tar_dir):
+    child_folders = [name for name in os.listdir(tar_dir) if os.path.isdir(os.path.join(tar_dir, name))]
+    return child_folders
+
+
+def tbd_get_all_tags(tar):
+    if isinstance(tar, EventAccumulator):
+        event_acc = tar
+    else:
+        print(f"reload from f{tar}")
+        event_acc = EventAccumulator(tar)
+        event_acc.Reload()
+    tags = event_acc.Tags()['scalars']
+    print(tags)
+    return tags
+
+
+def tbd_get_data(event_acc, tag):
     scalar_data = event_acc.Scalars(tag)
     steps = [x.step for x in scalar_data]
     values = [x.value for x in scalar_data]
+    return values, steps
 
-    return steps, values
 
 @dataclass
-class UniformedTbdData:
-    info: Dict[str, Dict[str, list]]
+class CurveData:
+    values: list
     steps: list
-    log_dir: str
+    name: str
 
-    @property
-    def name(self):
-        return os.path.basename(self.log_dir)
+from scipy import stats
+from scipy.interpolate import make_interp_spline
 
-def extract_data_uniformed(log_dir, **kwargs)->UniformedTbdData:
-    """
-    return: 
-    {
-        "info":{
-            "tags 1": {"tag1": ...},
-            ...,
-        }
-        "steps": list
-        "log_dir": log_dir
-    }
-    """
-    event_acc = EventAccumulator(log_dir)
-    event_acc.Reload()
-    info = {}
-    steps = None
-    for key, val in tags_dict.items():
-        temp = {}
-        for tag in val:
-            scalar_data = event_acc.Scalars(tag)
-            if steps is None:
-                steps = [x.step for x in scalar_data]
-            values = [x.value for x in scalar_data]
-            temp[tag] = values
-        info[key] = temp
-    assert steps is not None, "Steps not defined."
-    return UniformedTbdData(info, steps, log_dir)
+def start2plot(data:Dict[str, Dict[str, List[CurveData]]], tag_filter=None, **kwargs):
+    figures = {}
 
-def get_dirs():
-    ret = []
-    for folder in os.listdir(path_folder):
-        if os.path.isdir(os.path.join(path_folder, folder)):
-            ret.append(folder)
-    return ret
+    def legend(fig, ax):
+        handles, labels = ax.get_legend_handles_labels()
 
-@dataclass
-class PlotFigure:
-    fig: plt.Figure
-    axs: Dict[str, plt.Axes]
-    key: str
+        # lower center
+        fig.legend(handles, labels, loc='lower center', ncol=3)
+        fig.subplots_adjust(bottom=0.15)
 
-    truncate:int=None
-    alpha=0.6
-    axe_legend=None
-    is_legend=True
+    def plot_cdata(cdata, ax, window=20):
+        print(f"plot {key} {tag}  {cdata.name}")
+        x = np.array(cdata.steps)
+        y = np.array(cdata.values)
+        y_smooth = scipy.signal.savgol_filter(y, window, 3)
+        y_upper = [np.max(y[i:i+window]) for i in range(len(x)-window)] + [np.max(y[-window+i:]) for i in range(window)]
+        y_lower = [np.min(y[i:i+window]) for i in range(len(x)-window)] + [np.min(y[-window+i:]) for i in range(window)]
+        y_upper = scipy.signal.savgol_filter(np.array(y_upper), window, 3)
+        y_lower = scipy.signal.savgol_filter(np.array(y_lower), window, 3)
+        line = ax.plot(x, y_smooth, label=cdata.name, alpha=0.8)[0]
+        color = line.get_color()
+        ax.fill_between(x, y_lower, y_upper, color=color, alpha=0.2)
 
-    def set_plot_config(self, **kwargs):
-        if "truncate" in kwargs:
-            self.truncate = kwargs["truncate"]
-        if "alpha" in kwargs:
-            self.alpha = kwargs["alpha"]
-
-    @staticmethod
-    def prepare_axes(fig: plt.Figure, tags:list):
-        edge_len = math.ceil(math.sqrt(len(tags)))
-        ret = {}
-        for i, tag in enumerate(tags):
-            ax:plt.Axes = fig.add_subplot(edge_len, edge_len, i+1)
-            ret[tag] = ax
-            ax_name = tag.split("/")[-1]
-            ax.set_title(ax_name)
-        return ret
-
-    def plotTbd(self, data:UniformedTbdData):
-        steps = data.steps
-        name = data.name
-        last_idx = -1 if self.truncate is None else min(self.truncate, len(steps))
-        values_dict = data.info[self.key]
-        for key, val in values_dict.items():
-            ax:plt.Axes = self.axs[key]
-            ax.plot(steps[:last_idx], val[:last_idx], label=name, alpha=self.alpha)
+    for key, val in  data.items():
+        f_eval = plt.figure(figsize=(16, 9))
+        f_eval.set_label("eval/" + key)
+        f_off = plt.figure(figsize=(16, 9))
+        f_off.set_label("offline/" + key)
+        eval_idx = 1
+        eval_axs = []
+        off_idx = 1
+        off_axs = []
+        for tag, cdatas in val.items():
+            if tag_filter is not None and not tag_filter(tag):
+                print(f"{tag} is filtered")
+                continue
+            if tag.startswith("eval"):
+                ax = f_eval.add_subplot(3,1,eval_idx)
+                for cdata in cdatas:
+                    if cdata.name.startswith("PRWIC_sum"):
+                        continue
+                    plot_cdata(cdata, ax, 20)
+                # ax.legend()
+                ax.set_title(tag)
+                eval_idx += 1
+                eval_axs.append(ax)
+            elif tag.startswith("offline"):
+                ax = f_off.add_subplot(2,3,off_idx)
+                for cdata in cdatas:
+                    if cdata.name.startswith("PRWIC_sum"):
+                        continue
+                    plot_cdata(cdata, ax, 200)
+                ax.set_title(tag)
+                off_idx += 1
+                off_axs.append(ax)
+                pass
+            else:
+                raise ValueError("tag invalid")
             pass
-        return
+        f_off.tight_layout()
+        f_eval.tight_layout()
+        legend(f_off, off_axs[0])
+        legend(f_eval, eval_axs[0])
+        figures[key] = (f_off, f_eval, off_axs, eval_axs)
+    return figures
 
-    def tidy(self):
-        for key, val in self.axs.items():
-            val.grid()
-        if self.is_legend:
-            if self.axe_legend is None:
-                l = math.sqrt(len(self.axs))
-                if math.ceil(l) > l:
-                    l = math.ceil(l)
-                    self.axe_legend = self.fig.add_subplot(l,l,l**2)
-                else:
-                    self.axe_legend = val
-            handles, labels = val.get_legend_handles_labels()
-            self.axe_legend.legend(handles, labels, loc='best')
-        self.fig.tight_layout()
+def tranverse_all(envs:list = None, algs:list = None, cached=False):
+    # prepare data dict
+    datas:Dict[str, Dict[str, List[CurveData]]] = {}
 
-    def save_fig(self):
-        fig = self.fig
-        fig.savefig(os.path.join(path_pic, f"{self.key}.png"))
+    env_folders = get_child_dirs(path_offline)
+    if envs is None:
+        envs = env_folders
+    for env in env_folders:
+        if env in envs:
+            env_data:Dict[str, List[CurveData]] = {}
+            algs_folders = get_child_dirs(os.path.join(path_offline, env))
+            if algs is None:
+                algs = algs_folders
+            for alg in algs_folders:
+                if alg in algs:
+                    exp_times = get_child_dirs(os.path.join(path_offline, env, alg))
+                    only_time = len(exp_times) == 1
+                    for exp_time in exp_times:
+                        print(f"Processing {env} {alg} {exp_time}")
+                        if cached and os.path.exists(os.path.join(path_offline, env, alg, exp_time, "buffered.pkl")):
+                            print("Loading...")
+                            with open(os.path.join(path_offline, env, alg, exp_time, "buffered.pkl"), "rb") as f:
+                                cdata_dict = pickle.load(f)
+                            for ckey, cval in cdata_dict.items():
+                                if ckey not in env_data.keys():
+                                    env_data[ckey] = []
+                                env_data[ckey] = env_data[ckey] + cval
+                        else:
+                            acc = EventAccumulator(os.path.join(path_offline, env, alg, exp_time))
+                            acc.Reload()
+                            tags = tbd_get_all_tags(acc)
+                            temp_dict = {}
+                            for tag in tags:
+                                if tag not in env_data.keys():
+                                    env_data[tag] = []
+                                temp_dict[tag] = []
+                                cdata = CurveData(*tbd_get_data(acc, tag), alg if only_time else alg + exp_time)
+                                temp_dict[tag].append(cdata)
+                                env_data[tag].append(cdata)
+                            with open(os.path.join(path_offline, env, alg, exp_time, "buffered.pkl"), "wb") as f:
+                                pickle.dump(temp_dict, f)
+                        pass
+                pass
+            datas[env] = env_data
+        pass
+    return datas
 
-    pass
-
-def plot_all(dirs:list, **kwargs):
-    
-    # prepare fig dict
-    fig_dict:Dict[str, PlotFigure] = {}
-    for key, val in tags_dict.items():
-        title = key.split("_")[-1]
-        fig = plt.figure()
-        fig.suptitle(title)
-        pfig = PlotFigure(fig, PlotFigure.prepare_axes(fig, val), key)
-        pfig.set_plot_config(**kwargs)
-        if key == "tags_metric":
-            pfig.is_legend=False
-        fig_dict[key] = pfig
-
-    for dir in dirs:
-        data = extract_data_uniformed(dir)
-        for key in data.info.keys():
-            pfig = fig_dict[key]
-            pfig.plotTbd(data)
-
-    for key, val in fig_dict.items():
-        val.tidy()
-        val.save_fig()
+def main():
+    sns.set_style("whitegrid")
+    print("getting data")
+    data = tranverse_all(cached=True)
+    print("ploting")
+    figs = start2plot(data=data, tag_filter=simple_filter)
+    for key, val in figs.items():
+        f_off, f_eval, off_axs, eval_axs = val
+        f_off.savefig(os.path.join(path_pic, f"{key}_offline.png"))
+        f_eval.savefig(os.path.join(path_pic, f"{key}_eval.png"))
     return
 
 
 if __name__ == "__main__":
-    # ret = extract_data_uniformed(os.path.join(path_folder, "AdamRad_cmp_1"))
-    dirs = [
-        "AdamW_lre3", 
-        "AdamWRad_lre3", 
-        "Adam_lre2", 
-        "Adam_lre3", 
-        "Rad_lre3",
-        "Rad_lre2",
-        "Rad_lre53",
-        ]
+    main()
+    pass
 
-    # dirs = [
-    #     "Rad_lre2_zetae16",
-    #     "Rad_lre2_nzeta",
-    #     "Rad_nparam",
-    #     "Rad_miter3000"
-    # ]
-
-    # dirs = [
-    #     "Rad_lre2_zetae16",
-    #     "AdamTorch_lre2",
-    #     "AdamWTorch_lre2",
-    #     "SGDTorch_lre2"
-    # ]
-
-    dirs = [os.path.join(path_folder, dir) for dir in dirs]
-    plot_all(dirs, truncate=300)
 

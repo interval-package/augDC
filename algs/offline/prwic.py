@@ -15,10 +15,10 @@ class PRWIC(AlgBaseOffline, ABC):
                  k=1, 
                  guard_lr=0.01,
                  gamma_c=1e-4,
-                 guard_factor=1e-4,
-                 epsilon=0,
+                 guard_factor=1e-2,
+                 epsilon=1e-4,
                  max_timesteps=10000,
-                 warm_factor_guard=0.3,
+                 warm_factor_guard=0.4,
                  **kwargs):
         super().__init__(**kwargs)
         self.data=data

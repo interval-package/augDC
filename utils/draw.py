@@ -3,14 +3,12 @@ import matplotlib.pyplot as plt
 import math, pickle
 from dataclasses import dataclass
 from typing import List, Tuple, Union, Dict
-import scipy
-import scipy.signal
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-import numpy as np
-import matplotlib.pyplot as plt
-
 import seaborn as sns
+import scipy
+import numpy as np
+
 
 """
 result:
@@ -35,13 +33,13 @@ offline_tags = \
     'offline/critic_loss', 
     'offline/guard_loss', 
     'offline/dc_loss', 
-    # 'offline/cons_loss', 
-    # 'offline/dc_cons_gap', 
+    'offline/cons_loss', 
+    'offline/dc_cons_gap', 
     'offline/actor_loss', 
-    # 'offline/combined_loss', 
+    'offline/combined_loss', 
     'offline/Q_value', 
     'offline/C_value', 
-    # 'offline/lmbda', 
+    'offline/lmbda', 
 ]
 
 eval_tags = \

@@ -60,9 +60,9 @@ def main():
         else:
             tconfig = task["config"]
         for key, val in tconfig.items():
-            one_task += ["--" + key, val]
+            one_task += ["--" + key, str(val)]
         scripts_with_args.append(one_task)
-    
+
     # Number of parallel threads
     num_threads = args.n_thread # len(scripts_with_args)
     

@@ -28,14 +28,28 @@ datasets = \
     # "walker2d-random-v2",
 ]
 
+param_env = {
+    "hopper": {
+        "beta": 2.0,
+        "alpha": 2.5,
+    },
+    "halfcheetah": {
+        "alpha": 40.0,
+        "beta": 2.0,
+        "k": 1,
+    },
+    "walker2d": {},
+    "antmaze": {},
+}
+
 scripts = [
     "main_offline.py",
     # "main_online.py",
 ]
 
 policies = [
-    "PRDC",
-    "PRWIC_sum",
+    # "PRDC",
+    # "PRWIC_sum",
     "PRWIC_max"
 ]
 
@@ -55,6 +69,9 @@ def generate_task_config(policy, env_id, **kwargs)->dict:
         "policy": policy,
         "env_id": env_id,
     }
+    env_name = env_id.split("-")[0]
+    if env_name in param_env.keys():
+        ret.update(param_env[env_name])
     ret.update(kwargs)
     return ret
 

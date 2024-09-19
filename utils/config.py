@@ -68,9 +68,16 @@ def get_config_off(algorithm="PRDC", config={}):
     ) 
     # reward_new = reward_old * scale + shift
     
+    # DCPI
+    parser.add_argument("--guard_lr", default=0.01, type=float)
+    parser.add_argument("--gamma_c", default=0.01, type=float)
+    parser.add_argument("--guard_factor", default=0.1, type=float)
+    parser.add_argument("--epsilon_c", default=1e-4, type=float)
+    parser.add_argument("--warm_factor_guard", default=0.3, type=float)
+
     # KD_TREE
     parser.add_argument("--alpha", default=2.5, type=float)
-    parser.add_argument("--beta", default=1.0, type=float)
+    parser.add_argument("--beta", default=2.0, type=float)
     parser.add_argument("--k", default=1, type=int)
     args = parser.parse_args()
 

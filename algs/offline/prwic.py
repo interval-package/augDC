@@ -16,7 +16,7 @@ class PRWIC(AlgBaseOffline, ABC):
                  guard_lr=0.01,
                  gamma_c=1e-4,
                  guard_factor=1e-2,
-                 epsilon=1e-4,
+                 epsilon_c=1e-4,
                  max_timesteps=10000,
                  warm_factor_guard=0.4,
                  **kwargs):
@@ -27,7 +27,7 @@ class PRWIC(AlgBaseOffline, ABC):
         self.kd_tree = KDTree(data)
         self.guard_factor = guard_factor
         self.gamma_c = gamma_c
-        self.epsilon = epsilon
+        self.epsilon_c = epsilon_c
         self.max_timesteps = max_timesteps
         self.warm_up_step = int(warm_factor_guard * max_timesteps)
 
@@ -42,7 +42,7 @@ class PRWIC(AlgBaseOffline, ABC):
         temp = {
             "balance_factor": self.guard_factor,
             "gamma_c": self.gamma_c,
-            "epsilon": self.epsilon,
+            "epsilon": self.epsilon_c,
         }
         ret.update(temp)
         return ret
@@ -76,7 +76,7 @@ class PRWIC(AlgBaseOffline, ABC):
             )
 
             # Change the constrain signal
-            p2d = torch.clamp(F.mse_loss(pi, nearest_neightbour) - self.epsilon, min=0, max=0.5)
+            p2d = torch.clamp(F.mse_loss(pi, nearest_neightbour) - self.epsilon_c, min=0, max=0.5)
 
             # Compute the target C value
             target_C1, target_C2 = self.guard_target(next_state, next_action)

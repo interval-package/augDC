@@ -3,6 +3,12 @@ import os, json
 
 datasets = \
 [
+    'antmaze-umaze-v0',
+    'antmaze-umaze-diverse-v0',
+    'antmaze-medium-play-v0',
+    'antmaze-medium-diverse-v0',
+    'antmaze-large-play-v0',
+    'antmaze-large-diverse-v0',
     # "Ant-maze-big-maze-noisy-multistart-True-multigoal-False-sparse-fixed",
     # "Ant-maze-big-maze-noisy-multistart-True-multigoal-False-sparse",
     # "Ant-maze-big-maze-noisy-multistart-True-multigoal-True-sparse-fixed",
@@ -17,10 +23,10 @@ datasets = \
     # "halfcheetah-medium-replay-v2",
     # "halfcheetah-medium-v2",
     # "halfcheetah-random-v2",
-    "hopper-medium-expert-v2",
-    "hopper-medium-replay-v2",
-    "hopper-medium-v2",
-    "hopper-random-v2",
+    # "hopper-medium-expert-v2",
+    # "hopper-medium-replay-v2",
+    # "hopper-medium-v2",
+    # "hopper-random-v2",
     # "maze2d-umaze-sparse-v1",
     # "walker2d-medium-expert-v2",
     # "walker2d-medium-replay-v2",
@@ -39,7 +45,33 @@ param_env = {
         "k": 1,
     },
     "walker2d": {},
-    "antmaze": {},
+
+    'antmaze-umaze-v0': {
+        "beta": 2.0,
+        "alpha": 2.5,
+    },
+    'antmaze-umaze-diverse-v0': {
+        "beta": 2.0,
+        "alpha": 2.5,
+    },
+
+    'antmaze-medium-play-v0': {
+        "beta": 7.5,
+        "alpha": 7.5,
+    },
+    'antmaze-medium-diverse-v0': {
+        "beta": 7.5,
+        "alpha": 7.5,
+    },
+
+    'antmaze-large-play-v0': {
+        "beta": 15.0,
+        "alpha": 20.0,
+    },
+    'antmaze-large-diverse-v0': {
+        "beta": 15.0,
+        "alpha": 20.0,
+    },
 }
 
 scripts = [
@@ -70,8 +102,11 @@ def generate_task_config(policy, env_id, **kwargs)->dict:
         "env_id": env_id,
     }
     env_name = env_id.split("-")[0]
-    if env_name in param_env.keys():
-        ret.update(param_env[env_name])
+    if env_name == "antmaze":
+        ret.update(param_env[env_id])
+    else:
+        if env_name in param_env.keys():
+            ret.update(param_env[env_name])
     ret.update(kwargs)
     return ret
 
